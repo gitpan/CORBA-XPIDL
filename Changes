@@ -1,5 +1,8 @@
 Revision history for Perl extension CORBA::XPIDL.
 
+0.03  Mon Jun  7 08:30:00 2004
+	- better support of 'import'
+
 0.02  Tue May 18 18:30:00 2004
 	- first release
 

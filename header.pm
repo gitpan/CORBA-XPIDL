@@ -110,6 +110,19 @@ sub visitSpecification {
 		}
 		print $FH "\n";
 	}
+	if (exists $node->{list_import}) {
+		print $FH "\n";
+		foreach (@{$node->{list_import}}) {
+			my $basename = $_->{value};
+			$basename =~ s/^:://;
+			$basename =~ s/::/_/g;
+			print $FH "\n";
+			print $FH "#ifndef __gen_",$basename,"_h__\n";
+			print $FH "#include \"",$basename,".h\"\n";
+			print $FH "#endif\n";
+		}
+		print $FH "\n";
+	}
 	# Support IDL files that don't include a root IDL file that defines
 	# NS_NO_VTABLE.
 	print $FH "/* For IDL files that don't want to include root IDL files. */\n";
@@ -801,7 +814,7 @@ sub visitSpecification {
 	my $self = shift;
 	my ($node) = @_;
 	foreach (@{$node->{list_export}}) {
-		$self->{symbtab}->Lookup($_)->visit($self);
+		$self->{symbtab}->Lookup($_)->visit($self, 1);
 	}
 }
 
@@ -813,7 +826,7 @@ sub visitModules {
 	my $self = shift;
 	my ($node) = @_;
 	foreach (@{$node->{list_export}}) {
-		$self->{symbtab}->Lookup($_)->visit($self);
+		$self->{symbtab}->Lookup($_)->visit($self, 1);
 	}
 }
 
@@ -827,11 +840,12 @@ sub visitBaseInterface {
 
 sub visitRegularInterface {
 	my $self = shift;
-	my ($node) = @_;
+	my ($node, $deep) = @_;
 	return if (exists $node->{$self->{key}});
 	$node->{$self->{key}} = $node->{idf} . " *";
+	return unless (defined $deep);
 	foreach (@{$node->{list_export}}) {
-		$self->{symbtab}->Lookup($_)->visit($self);
+		$self->_get_defn($_)->visit($self);
 	}
 }
 
