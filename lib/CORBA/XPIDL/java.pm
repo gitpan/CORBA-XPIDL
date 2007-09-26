@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use UNIVERSAL;
 
 package CORBA::XPIDL::javaVisitor;
@@ -16,11 +17,13 @@ sub new {
 	my $filename;
 	if ($parser->YYData->{opt_e}) {
 		$filename = $parser->YYData->{opt_e};
-	} else {
+	}
+	else {
 		if ($parser->YYData->{opt_o}) {
-			$filename = $parser->YYData->{opt_o} . ".java";
-		} else {
-			$filename = basename($self->{srcname}, ".idl") . ".java";
+			$filename = $parser->YYData->{opt_o} . '.java';
+		}
+		else {
+			$filename = basename($self->{srcname}, '.idl') . '.java';
 		}
 	}
 	$self->open_stream($filename);
@@ -31,9 +34,8 @@ sub new {
 sub open_stream {
 	my $self = shift;
 	my ($filename) = @_;
-	open(OUT, "> $filename")
+	open $self->{out}, '>', $filename
 			or die "can't open $filename ($!).\n";
-	$self->{out} = \*OUT;
 	$self->{filename} = $filename;
 }
 
@@ -42,7 +44,8 @@ sub _get_defn {
 	my ($defn) = @_;
 	if (ref $defn) {
 		return $defn;
-	} else {
+	}
+	else {
 		return $self->{symbtab}->Lookup($defn);
 	}
 }
@@ -53,16 +56,16 @@ sub _classname_iid {
 	my $idf = $node->{idf};
 	$idf =~ s/^ns/NS_/;		# backcompat naming styles
 	my $classname = uc $idf;
-	$classname .= "_IID";
+	$classname .= '_IID';
 	return $classname;
 }
 
 sub _comment {
 	my $self = shift;
 	my ($node) = @_;
-	return "" unless ($node->{doc});
+	return q{} unless ($node->{doc});
 	my $FH = $self->{out};
-	my $indent = "    ";
+	my $indent = q{    };
 	print $FH $indent,"/**\n";
 	foreach (split /\n/, $node->{doc}) {
 		s/^\s+//;
@@ -80,65 +83,88 @@ sub _java_type {
 		$node = $self->_get_defn($node->{type});
 	}
 
-	if      ($node->isa('VoidType')) {
-		return "Object";
-	} elsif ($node->isa('IntegerType')) {
-		if      ($node->{value} eq 'short') {
-			return "short";
-		} elsif ($node->{value} eq 'unsigned short') {
-			return "short";
-		} elsif ($node->{value} eq 'long') {
-			return "int";
-		} elsif ($node->{value} eq 'unsigned long') {
-			return "int";
-		} elsif ($node->{value} eq 'long long') {
-			return "long";
-		} elsif ($node->{value} eq 'unsigned long long') {
-			return "long";
-		} else {
+	if    ($node->isa('VoidType')) {
+		return 'Object';
+	}
+	elsif ($node->isa('IntegerType')) {
+		if    ($node->{value} eq 'short') {
+			return 'short';
+		}
+		elsif ($node->{value} eq 'unsigned short') {
+			return 'short';
+		}
+		elsif ($node->{value} eq 'long') {
+			return 'int';
+		}
+		elsif ($node->{value} eq 'unsigned long') {
+			return 'int';
+		}
+		elsif ($node->{value} eq 'long long') {
+			return 'long';
+		}
+		elsif ($node->{value} eq 'unsigned long long') {
+			return 'long';
+		}
+		else {
 			warn __PACKAGE__,"::_java_type (IntegerType) $node->{value}.\n";
 		}
-	} elsif ($node->isa('CharType')) {
-		return "char";
-	} elsif ($node->isa('WideCharType')) {
-		return "char";
-	} elsif ($node->isa('StringType')) {
-		return "String";
-	} elsif ($node->isa('WideStringType')) {
-		return "String";
-	} elsif ($node->isa('BooleanType')) {
-		return "boolean";
-	} elsif ($node->isa('OctetType')) {
-		return "byte";
-	} elsif ($node->isa('FloatingPtType')) {
-		if      ($node->{value} eq 'float') {
-			return "float";
-		} elsif ($node->{value} eq 'double') {
-			return "double";
-		} elsif ($node->{value} eq 'long double') {
+	}
+	elsif ($node->isa('CharType')) {
+		return 'char';
+	}
+	elsif ($node->isa('WideCharType')) {
+		return 'char';
+	}
+	elsif ($node->isa('StringType')) {
+		return 'String';
+	}
+	elsif ($node->isa('WideStringType')) {
+		return 'String';
+	}
+	elsif ($node->isa('BooleanType')) {
+		return 'boolean';
+	}
+	elsif ($node->isa('OctetType')) {
+		return 'byte';
+	}
+	elsif ($node->isa('FloatingPtType')) {
+		if    ($node->{value} eq 'float') {
+			return 'float';
+		}
+		elsif ($node->{value} eq 'double') {
+			return 'double';
+		}
+		elsif ($node->{value} eq 'long double') {
 			warn __PACKAGE__," 'long double' not available at this time for Java.\n";
-			return "double";
-		} else {
+			return 'double';
+		}
+		else {
 			warn __PACKAGE__,"::_java_type (FloatingType) $node->{value}.\n";
 		}
-	} elsif ($node->isa('NativeType')) {
-		if      (  $node->{native} eq "void" ) {
-			return "Object";
-		} elsif (  $node->{native} eq "nsID"
-				or $node->{native} eq "nsIID"
-				or $node->{native} eq "nsCID" ) {
+	}
+	elsif ($node->isa('NativeType')) {
+		if    (  $node->{native} eq 'void' ) {
+			return 'Object';
+		}
+		elsif (  $node->{native} eq 'nsID'
+				or $node->{native} eq 'nsIID'
+				or $node->{native} eq 'nsCID' ) {
 			# XXX: s.b test for "iid" attribute
 			# XXX: special class for nsIDs
-			return "nsID";
-		} else {
-			# XXX: special class for opaque types
-			return "OpaqueValue";
+			return 'nsID';
 		}
-	} elsif ($node->isa('BaseInterface')) {
+		else {
+			# XXX: special class for opaque types
+			return 'OpaqueValue';
+		}
+	}
+	elsif ($node->isa('BaseInterface')) {
 		return $node->{idf};
-	} elsif ($node->isa('ForwardBaseInterface')) {
+	}
+	elsif ($node->isa('ForwardBaseInterface')) {
 		return $node->{idf};
-	} else {
+	}
+	else {
 		my $class = ref $node;
 		warn __PACKAGE__,"::_java_type unknown type ($class).\n";
 	}
@@ -218,7 +244,7 @@ sub visitRegularInterface {
 	print $FH "\n";
 	print $FH "/**\n";
 	print $FH " * Interface ",$node->{idf},"\n";
-	my $iid = $node->getProperty("uuid");
+	my $iid = $node->getProperty('uuid');
 	if (defined $iid) {
 		print $FH " *\n";
 		print $FH " * IID: 0x",$iid,"\n";
@@ -339,8 +365,8 @@ sub visitOperation {
 	my ($node) = @_;
 	my $FH = $self->{out};
 
-	my $method_notxpcom = $node->hasProperty("notxpcom");
-	my $method_noscript = $node->hasProperty("noscript");
+	my $method_notxpcom = $node->hasProperty('notxpcom');
+	my $method_noscript = $node->hasProperty('noscript');
 
 	print $FH "\n";
 	$self->_comment($node);
@@ -356,11 +382,12 @@ sub visitOperation {
 	my $type = $self->_get_defn($node->{type});
 	if ($method_notxpcom or !$type->isa('VoidType')) {
 		print $FH $self->_java_type($type);
-	} else {
+	}
+	else {
 		# Check for retval attribute
 		my $retval_param;
 		foreach (@{$node->{list_param}}) {
-			if ($_->hasProperty("retval")) {
+			if ($_->hasProperty('retval')) {
 				$retval_param = $_;
 				last;
 			}
@@ -368,7 +395,8 @@ sub visitOperation {
 		if (defined $retval_param) {
 			$type = $self->_get_defn($retval_param->{type});
 			print $FH $self->_java_type($type);
-		} else {
+		}
+		else {
 			print $FH "void";
 		}
 	}
@@ -380,7 +408,7 @@ sub visitOperation {
 	my $first = 1;
 	foreach (@{$node->{list_param}}) {
 		# Skip "retval"
-		next if ($_->hasProperty("retval"));
+		next if ($_->hasProperty('retval'));
 		print $FH ", " unless ($first);
 		# Put in type of parameter
 		$type = $self->_get_defn($_->{type});
@@ -426,7 +454,7 @@ sub visitAttribute {
 	my ($node) = @_;
 	my $FH = $self->{out};
 
-	my $method_noscript = $node->hasProperty("noscript");
+	my $method_noscript = $node->hasProperty('noscript');
 	my $type = $self->_get_defn($node->{type});
 
 	print $FH "\n";

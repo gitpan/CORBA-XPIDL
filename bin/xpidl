@@ -5,8 +5,10 @@ use Getopt::Std;
 use Pod::Usage;
 use File::Temp qw(tempfile);
 
+use CORBA::IDL;
 use CORBA::IDL::parserxp;
 use CORBA::IDL::symbtab;
+use CORBA::XPIDL;
 use CORBA::XPIDL::check;
 
 my %handlers = (
@@ -22,8 +24,8 @@ getopts('ae:i:I:m:o:t:vwx', \%opts)
 		or pod2usage(-verbose => 1);
 
 if ($opts{v}) {
-	print "CORBA::XPIDL $CORBA::XPIDL::check::VERSION\n";
-	print "CORBA::IDL $CORBA::IDL::node::VERSION\n";
+	print "CORBA::XPIDL $CORBA::XPIDL::VERSION\n";
+	print "CORBA::IDL $CORBA::IDL::VERSION\n";
 	print "based on IDL $Parser::IDL_version\n";
 	print "$0\n";
 	print "Perl $] on $^O\n";
@@ -39,11 +41,11 @@ pod2usage(-message => "must specify output mode", -verbose => 1)
 		unless ($opts{m});
 pod2usage(-message => "unknown mode $opts{m}", -verbose => 1)
 		unless (exists $handlers{$opts{m}});
-$opts{t} = "1.2" unless (exists $opts{t});
+$opts{t} = '1.2' unless (exists $opts{t});
 die "version $opts{t} not supported.\n"
-		if ($opts{t} eq "1.0");
+		if ($opts{t} eq '1.0');
 die "version $opts{t} not recognised.\n"
-		if ($opts{t} ne "1.1" and $opts{t} ne "1.2");
+		if ($opts{t} ne '1.1' and $opts{t} ne '1.2');
 
 my $parser = new Parser;
 #$parser->YYData->{collision_allowed} = 1;
@@ -52,7 +54,7 @@ $parser->YYData->{verbose_warning} = $opts{w};	# 0, 1
 $parser->YYData->{verbose_info} = $opts{w};		# 0, 1
 $parser->YYData->{verbose_deprecated} = 1;		# 0, 1 (concerns only version '2.4' and upper)
 $parser->YYData->{opt_i} = $opts{i} if (exists $opts{i});
-if ($opts{m} ne "html") {
+if ($opts{m} ne 'html') {
 	$parser->YYData->{opt_a} = $opts{a};
 	$parser->YYData->{opt_e} = $opts{e};
 	$parser->YYData->{opt_m} = $opts{m};
@@ -134,25 +136,29 @@ sub handler_doc {
 sub handler_html {
 	my ($parser) = @_;
 	use Data::Dumper;
-	use CORBA::HTML::index;
-	use CORBA::HTML::html;
+	eval {
+		use CORBA::HTML;
+		use CORBA::HTML::index;
+		use CORBA::HTML::html;
+	};
+	die $@ if ($@);
 
 	use vars qw ($global);
-	unless (do "index.lst") {
+	unless (do 'index.lst') {
 		$global->{index_module} = {};
 		$global->{index_interface} = {};
 		$global->{index_value} = {};
 		$global->{index_entry} = {};
 	}
 
-	$parser->YYData->{opt_s} = "style";
+	$parser->YYData->{opt_s} = 'style';
 	push @{$parser->YYData->{root}->{list_decl}}, @built_in;
 	$parser->YYData->{root}->visit(new CORBA::HTML::indexVisitor($parser));
 	$parser->YYData->{root}->visit(new CORBA::HTML::htmlVisitor($parser));
 
-	if (open PERSISTANCE,"> index.lst") {
-		print PERSISTANCE Data::Dumper->Dump([$global], [qw(global)]);
-		close PERSISTANCE;
+	if (open my $PERSISTANCE, '>', 'index.lst') {
+		print $PERSISTANCE Data::Dumper->Dump([$global], [qw(global)]);
+		close $PERSISTANCE;
 	} else {
 		warn "can't open index.lst.\n";
 	}
@@ -166,9 +172,9 @@ sub handler_java {
 
 sub built_in {
 	my ($parser) = @_;
-	$parser->YYData->{filename} = "built-in";
+	$parser->YYData->{filename} = 'built-in';
 	$parser->YYData->{lineno} = 0;
-	$parser->YYData->{doc} = '';
+	$parser->YYData->{doc} = q{};
 	my @list_decl = ();
 	# from nsrootidl.idl
 	push @list_decl, new TypeDeclarator($parser,
@@ -644,7 +650,7 @@ http://mozilla.org/scriptable/typelib_file.html
 
 =head1 SEE ALSO
 
-L<CORBA::IDL>, L<xpt_dump.pl>, L<xpt_link.pl>
+L<CORBA::IDL>, L<xpt_dump>, L<xpt_link>
 
 =head1 AUTHORS
 
@@ -654,7 +660,7 @@ Port to Perl by Francois Perrad, francois.perrad@gadz.org
 
 =head1 COPYRIGHT
 
-Copyright 2004, Francois Perrad.
+Copyright 2004-2007, Francois Perrad.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use UNIVERSAL;
 
 package XPT;
@@ -52,34 +53,34 @@ sub ReadBuffer {
 sub Read8 {
 	my ($r_buffer, $r_offset) = @_;
 	my $str = ReadBuffer($r_buffer, $r_offset, 1);
-	return unpack "C", $str;
+	return unpack 'C', $str;
 }
 
 sub Write8 {
 	my ($value) = @_;
-	return pack "C", $value;
+	return pack 'C', $value;
 }
 
 sub Read16 {
 	my ($r_buffer, $r_offset) = @_;
 	my $str = ReadBuffer($r_buffer, $r_offset, 2);
-	return unpack "n", $str;
+	return unpack 'n', $str;
 }
 
 sub Write16 {
 	my ($value) = @_;
-	return pack "n", $value;
+	return pack 'n', $value;
 }
 
 sub Read32 {
 	my ($r_buffer, $r_offset) = @_;
 	my $str = ReadBuffer($r_buffer, $r_offset, 4);
-	return unpack "N", $str;
+	return unpack 'N', $str;
 }
 
 sub Write32 {
 	my ($value) = @_;
-	return pack "N", $value;
+	return pack 'N', $value;
 }
 
 sub Read64 {
@@ -109,7 +110,7 @@ sub WriteStringInline {
 sub ReadCString {
 	my ($r_buffer, $r_offset) = @_;
 	my $offset = Read32($r_buffer, $r_offset);
-	return "" unless ($offset);
+	return q{} unless ($offset);
 	my $start = $data_pool_offset + $offset - 1;
 	my $end = index $$r_buffer, "\0", $start;
 	my $str = substr $$r_buffer, $start, $end - $start;
@@ -179,9 +180,10 @@ sub demarshal {
 		while ($num_interfaces --) {
 			my $entry = XPT::InterfaceDirectoryEntry::demarshal($r_buffer, \$offset);
 			if ($entry->{iid}->_is_nul()) {
-				my $fullname = ($entry->{name_space} || "") . "::" . $entry->{name};
+				my $fullname = ($entry->{name_space} || q{}) . '::' . $entry->{name};
 				$interface_iid_nul{$fullname} = $entry;
-			} else {
+			}
+			else {
 				$interface_iid{$entry->{iid}->stringify()} = $entry;
 			}
 		}
@@ -190,7 +192,8 @@ sub demarshal {
 		$XPT::demarshal_retcode = 1;
 		if ($XPT::demarshal_not_abort) {
 			warn $@;
-		} else {
+		}
+		else {
 			die $@;
 		}
 	}
@@ -256,7 +259,7 @@ sub marshal {
 	my $self = shift;
 
 	my $header_size = length(MAGIC) + 1 + 1 + 2 + 4 + 4 + 4;
-	my $annotations = "";
+	my $annotations = q{};
 	foreach (@{$self->{annotations}}) {
 		$annotations .= $_->marshal();
 	}
@@ -266,8 +269,8 @@ sub marshal {
 	$header_size += length($annotations);
 	my $interface_directory_offset = $header_size + 1;
 	my @interface_directory = $self->_interface_directory();
-	$XPT::data_pool = "";
-	my $interface_directory = "";
+	$XPT::data_pool = q{};
+	my $interface_directory = q{};
 	foreach (@interface_directory) {
 		$interface_directory .= $_->marshal();
 	}
@@ -290,9 +293,9 @@ sub marshal {
 sub stringify {
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "" unless (defined $indent);
-	my $new_indent = $indent . "   ";
-	my $more_indent = $new_indent . "   ";
+	$indent = q{} unless (defined $indent);
+	my $new_indent = $indent . q{   };
+	my $more_indent = $new_indent . q{   };
 
 	my @interface_directory = $self->_interface_directory();
 	my $str = $indent . "Header:\n";
@@ -304,7 +307,8 @@ sub stringify {
 		$str .= "\n";
 		if ($self->{magic} eq MAGIC) {
 			$str .= $new_indent . "                       PASSED\n";
-		} else {
+		}
+		else {
 			$str .= $new_indent . "                       FAILED\n";
 		}
 	}
@@ -338,7 +342,8 @@ sub stringify {
 		if ($XPT::stringify_verbose) {
 			$str .= $new_indent . "Interface #" . $nb ++ . ":\n";
 			$str .= $entry->stringify($new_indent . $new_indent, $self);
-		} else {
+		}
+		else {
 			$str .= $entry->stringify($new_indent, $self);
 		}
 	}
@@ -364,7 +369,8 @@ sub terminate_annotations {
 	my $self = shift;
 	if (exists $self->{annotations}) {
 		${$self->{annotations}}[-1]->{is_last} = 1;
-	} else {
+	}
+	else {
 		my $annotation = new XPT::Annotation(
 				is_last					=> 1,
 				tag						=> 0,
@@ -378,23 +384,25 @@ sub add_interface {
 	my ($entry) = @_;
 	$self->{interface_iid_nul} = {} unless (exists $self->{interface_iid_nul});
 	$self->{interface_iid} = {} unless (exists $self->{interface_iid});
-	my $fullname = $entry->{name_space} . "::" . $entry->{name};
+	my $fullname = $entry->{name_space} . '::' . $entry->{name};
 	if ($entry->{iid}->_is_nul()) {
 		return if (exists $self->{interface_iid_nul}->{$fullname});
 		foreach (values %{$self->{interface_iid}}) {
-			return if ($fullname eq $_->{name_space} . "::" . $_->{name});
+			return if ($fullname eq $_->{name_space} . '::' . $_->{name});
 		}
 		$self->{interface_iid_nul}->{$fullname} = $entry;
-	} else {
+	}
+	else {
 		my $iid = $entry->{iid}->stringify();
 		if (exists $self->{interface_iid}->{$iid}) {
 			return if (defined $self->{interface_iid}->{$iid}->{interface_descriptor});
-		} else {
+		}
+		else {
 			delete $self->{interface_iid_nul}->{$fullname}
 					if (exists $self->{interface_iid_nul}->{$fullname});
 			foreach (values %{$self->{interface_iid}}) {
 				croak "ERROR: found duplicate definition of interface $fullname with iids \n"
-						if ($fullname eq $_->{name_space} . "::" . $_->{name});
+						if ($fullname eq $_->{name_space} . '::' . $_->{name});
 			}
 		}
 		$self->{interface_iid}->{$iid} = $entry;
@@ -430,8 +438,9 @@ sub _find_itf {
 					and $_->{name} eq $itf->{name} ) {
 				return $idx;
 			}
-		} else {
-			if ($itf eq $_->{name_space} . "::" . $_->{name}) {
+		}
+		else {
+			if ($itf eq $_->{name_space} . '::' . $_->{name}) {
 				return $idx;
 			}
 		}
@@ -439,7 +448,8 @@ sub _find_itf {
 	}
 	if (ref $itf) {
 		croak "ERROR: interface $itf->{name_space}::$itf->{name} not found\n";
-	} else {
+	}
+	else {
 		croak "ERROR: interface $itf not found\n";
 	}
 }
@@ -478,7 +488,8 @@ sub marshal {
 	$buffer .= XPT::WriteCString($self->{name_space});
 	if (defined $self->{interface_descriptor}) {
 		$buffer .= $self->{interface_descriptor}->marshal();
-	} else {
+	}
+	else {
 		$buffer .= XPT::Write32(0);
 	}
 	return $buffer;
@@ -487,24 +498,26 @@ sub marshal {
 sub stringify {
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "   " unless (defined $indent);
-	my $new_indent = $indent . "   ";
+	$indent = q{   } unless (defined $indent);
+	my $new_indent = $indent . q{   };
 
-	my $str = "";
+	my $str = q{};
 	my $iid = $self->{iid}->stringify();
 	if ($XPT::stringify_verbose) {
-		my $name_space = $self->{name_space} || "none";
+		my $name_space = $self->{name_space} || 'none';
 		$str .= $indent . "IID:                             " . $iid . "\n";
 		$str .= $indent . "Name:                            " . $self->{name} . "\n";
 		$str .= $indent . "Namespace:                       " . $name_space . "\n";
 		$str .= $indent . "Descriptor:\n";
-	} else {
-		$str .= $indent . "- " . $self->{name_space} . "::" . $self->{name};
+	}
+	else {
+		$str .= $indent . '- ' . $self->{name_space} . '::' . $self->{name};
 		$str .= " (" . $iid . "):\n";
 	}
 	if (defined $self->{interface_descriptor}) {
 		$str .= $self->{interface_descriptor}->stringify($new_indent);
-	} else {
+	}
+	else {
 		$str .= $indent . "   [Unresolved]\n";
 	}
 	return $str;
@@ -540,7 +553,8 @@ sub demarshal {
 		$XPT::demarshal_retcode = 1;
 		if ($XPT::demarshal_not_abort) {
 			warn $@;
-		} else {
+		}
+		else {
 			die $@;
 		}
 	}
@@ -556,11 +570,11 @@ sub demarshal {
 
 sub marshal {
 	my $self = shift;
-	my $method_descriptors = "";
+	my $method_descriptors = q{};
 	foreach (@{$self->{method_descriptors}}) {
 		$method_descriptors .= $_->marshal();
 	}
-	my $const_descriptors = "";
+	my $const_descriptors = q{};
 	foreach (@{$self->{const_descriptors}}) {
 		$const_descriptors .= $_->marshal();
 	}
@@ -580,28 +594,30 @@ sub marshal {
 sub stringify {
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "  " unless (defined $indent);
-	my $new_indent = $indent . "   ";
-	my $more_indent = $new_indent . "   ";
+	$indent = q{  } unless (defined $indent);
+	my $new_indent = $indent . q{   };
+	my $more_indent = $new_indent . q{   };
 
-	my $str = "";
+	my $str = q{};
 	if ($self->{parent_interface_index}) {
 		my $name;
 		if (defined $self->{parent_interface}) {
 			my $itf = $self->{parent_interface};
 			if (ref $itf) {
-				$name = $itf->{name_space} . "::" . $itf->{name};
-			} else {
+				$name = $itf->{name_space} . '::' . $itf->{name};
+			}
+			else {
 				$name = $itf;
 			}
-		} else {
+		}
+		else {
 			$name = "UNKNOWN_INTERFACE";
 		}
 		$str .= $indent . "Parent: " . $name . "\n"
 	}
 	$str .= $indent . "Flags:\n";
-	$str .= $new_indent . "Scriptable: " . ($self->{is_scriptable} ? "TRUE" : "FALSE") . "\n";
-	$str .= $new_indent . "Function: " . ($self->{is_function} ? "TRUE" : "FALSE") . "\n";
+	$str .= $new_indent . "Scriptable: " . ($self->{is_scriptable} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $new_indent . "Function: " . ($self->{is_function} ? 'TRUE' : 'FALSE') . "\n";
 	if ($XPT::stringify_verbose and exists $self->{parent_interface_index}) {
 		$str .= $indent . "Index of parent interface (in data pool): ";
 			$str .= $self->{parent_interface_index} . "\n";
@@ -610,7 +626,8 @@ sub stringify {
 		if ($XPT::stringify_verbose) {
 			$str .= $indent . "# of Method Descriptors:                   ";
 				$str .= scalar(@{$self->{method_descriptors}}) . "\n";
-		} else {
+		}
+		else {
 			$str .= $indent . "Methods:\n";
 		}
 		my $nb = 0;
@@ -618,11 +635,13 @@ sub stringify {
 			if ($XPT::stringify_verbose) {
 				$str .= $new_indent . "Method #" . $nb ++ . ":\n";
 				$str .= $_->stringify($more_indent);
-			} else {
+			}
+			else {
 				$str .= $_->stringify($new_indent);
 			}
 		}
-	} else {
+	}
+	else {
 		$str .= $indent . "Methods:\n";
 		$str .= $new_indent . "No Methods\n";
 	}
@@ -630,7 +649,8 @@ sub stringify {
 		if ($XPT::stringify_verbose) {
 			$str .= $indent . "# of Constant Descriptors:                  ";
 				$str .= scalar(@{$self->{const_descriptors}}) . "\n";
-		} else {
+		}
+		else {
 			$str .= $indent . "Constants:\n";
 		}
 		my $nb = 0;
@@ -638,11 +658,13 @@ sub stringify {
 			if ($XPT::stringify_verbose) {
 				$str .= $new_indent . "Constant #" . $nb ++ . ":\n";
 				$str .= $_->stringify($more_indent);
-			} else {
+			}
+			else {
 				$str .= $_->stringify($new_indent);
 			}
 		}
-	} else {
+	}
+	else {
 		$str .= $indent . "Constants:\n";
 		$str .= $new_indent . "No Constants\n";
 	}
@@ -664,32 +686,42 @@ sub demarshal {
 		die "illegal type for const ! (is_pointer)\n";
 	}
 	my $value = undef;
-	if      ($type->{tag} == XPT::int8) {
+	if    ($type->{tag} == XPT::int8) {
 		$value = XPT::Read8($r_buffer, $r_offset);
 		$value -= 256 if ($value > 127);
-	} elsif ($type->{tag} == XPT::int16) {
+	}
+	elsif ($type->{tag} == XPT::int16) {
 		$value = XPT::Read16($r_buffer, $r_offset);
 		$value -= 65536 if ($value > 32277);
-	} elsif ($type->{tag} == XPT::int32) {
+	}
+	elsif ($type->{tag} == XPT::int32) {
 		$value = XPT::Read32($r_buffer, $r_offset);
 		$value -= 4294967295 if ($value > 2147483647);
-	} elsif ($type->{tag} == XPT::int64) {
+	}
+	elsif ($type->{tag} == XPT::int64) {
 		$value = XPT::Read64($r_buffer, $r_offset);
 		# unsupported
-	} elsif ($type->{tag} == XPT::uint8) {
+	}
+	elsif ($type->{tag} == XPT::uint8) {
 		$value = XPT::Read8($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::uint16) {
+	}
+	elsif ($type->{tag} == XPT::uint16) {
 		$value = XPT::Read16($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::uint32) {
+	}
+	elsif ($type->{tag} == XPT::uint32) {
 		$value = XPT::Read32($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::uint64) {
+	}
+	elsif ($type->{tag} == XPT::uint64) {
 		$value = XPT::Read64($r_buffer, $r_offset);
 		# unsupported
-	} elsif ($type->{tag} == XPT::char) {
+	}
+	elsif ($type->{tag} == XPT::char) {
 		$value = chr(XPT::Read8($r_buffer, $r_offset));
-	} elsif ($type->{tag} == XPT::wchar_t) {
+	}
+	elsif ($type->{tag} == XPT::wchar_t) {
 		$value = chr(XPT::Read16($r_buffer, $r_offset));
-	} else {
+	}
+	else {
 		die "illegal type for const ! ($type->{tag})\n";
 	}
 
@@ -706,32 +738,42 @@ sub marshal {
 	my $value = $self->{value};
 	my $buffer = XPT::WriteCString($self->{name});
 	$buffer .= $type->marshal();
-	if      ($type->{tag} == XPT::int8) {
+	if    ($type->{tag} == XPT::int8) {
 		$value += 256 if ($value < 0);
 		$buffer .= XPT::Write8($value);
-	} elsif ($type->{tag} == XPT::int16) {
+	}
+	elsif ($type->{tag} == XPT::int16) {
 		$value += 65536 if ($value < 0);
 		$buffer .= XPT::Write16($value);
-	} elsif ($type->{tag} == XPT::int32) {
+	}
+	elsif ($type->{tag} == XPT::int32) {
 		$value += 4294967295 if ($value < 0);
 		$buffer .= XPT::Write32($value);
-	} elsif ($type->{tag} == XPT::int64) {
+	}
+	elsif ($type->{tag} == XPT::int64) {
 		$buffer .= XPT::Write64($value);
 		# unsupported
-	} elsif ($type->{tag} == XPT::uint8) {
+	}
+	elsif ($type->{tag} == XPT::uint8) {
 		$buffer .= XPT::Write8($value);
-	} elsif ($type->{tag} == XPT::uint16) {
+	}
+	elsif ($type->{tag} == XPT::uint16) {
 		$buffer .= XPT::Write16($value);
-	} elsif ($type->{tag} == XPT::uint32) {
+	}
+	elsif ($type->{tag} == XPT::uint32) {
 		$buffer .= XPT::Write32($value);
-	} elsif ($type->{tag} == XPT::uint64) {
+	}
+	elsif ($type->{tag} == XPT::uint64) {
 		$buffer .= XPT::Write64($value);
 		# unsupported
-	} elsif ($type->{tag} == XPT::char) {
+	}
+	elsif ($type->{tag} == XPT::char) {
 		$buffer .= XPT::Write8(ord $value);
-	} elsif ($type->{tag} == XPT::wchar_t) {
+	}
+	elsif ($type->{tag} == XPT::wchar_t) {
 		$buffer .= XPT::Write16(ord $value);
-	} else {
+	}
+	else {
 		die "illegal type for const ! ($type->{tag})\n";
 	}
 	return $buffer;
@@ -740,22 +782,24 @@ sub marshal {
 sub stringify {
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "  " unless (defined $indent);
-	my $new_indent = $indent . "   ";
+	$indent = q{  } unless (defined $indent);
+	my $new_indent = $indent . q{   };
 
-	my $str = "";
+	my $str = q{};
 	if ($XPT::stringify_verbose) {
 		$str .= $indent . "Name:   " . $self->{name} . "\n";
 		$str .= $indent . "Type Descriptor: \n";
 		$str .= $self->{type}->stringify($new_indent);
 		$str .= $indent . "Value:  ";
-	} else {
-		$str .= $indent . $self->{type}->stringify() . " " . $self->{name} . " = ";
+	}
+	else {
+		$str .= $indent . $self->{type}->stringify() . q{ } . $self->{name} . ' = ';
 	}
 	$str .= $self->{value};
 	if ($XPT::stringify_verbose) {
 		$str .= "\n";
-	} else {
+	}
+	else {
 		$str .= ";\n";
 	}
 	return $str;
@@ -813,18 +857,18 @@ sub marshal {
 sub stringify {
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "      " unless (defined $indent);
-	my $new_indent = $indent . "   ";
-	my $more_indent = $new_indent . "   ";
+	$indent = q{      } unless (defined $indent);
+	my $new_indent = $indent . q{   };
+	my $more_indent = $new_indent . q{   };
 
-	my $str = "";
+	my $str = q{};
 	if ($XPT::stringify_verbose) {
 		$str .= $indent . "Name:             " . $self->{name} . "\n";
-		$str .= $indent . "Is Getter?        " . ($self->{is_getter} ? "TRUE" : "FALSE") . "\n";
-		$str .= $indent . "Is Setter?        " . ($self->{is_setter} ? "TRUE" : "FALSE") . "\n";
-		$str .= $indent . "Is NotXPCOM?      " . ($self->{is_not_xpcom} ? "TRUE" : "FALSE") . "\n";
-		$str .= $indent . "Is Constructor?   " . ($self->{is_constructor} ? "TRUE" : "FALSE") . "\n";
-		$str .= $indent . "Is Hidden?        " . ($self->{is_hidden} ? "TRUE" : "FALSE") . "\n";
+		$str .= $indent . "Is Getter?        " . ($self->{is_getter} ? 'TRUE' : 'FALSE') . "\n";
+		$str .= $indent . "Is Setter?        " . ($self->{is_setter} ? 'TRUE' : 'FALSE') . "\n";
+		$str .= $indent . "Is NotXPCOM?      " . ($self->{is_not_xpcom} ? 'TRUE' : 'FALSE') . "\n";
+		$str .= $indent . "Is Constructor?   " . ($self->{is_constructor} ? 'TRUE' : 'FALSE') . "\n";
+		$str .= $indent . "Is Hidden?        " . ($self->{is_hidden} ? 'TRUE' : 'FALSE') . "\n";
 		$str .= $indent . "# of arguments:   " . scalar(@{$self->{params}}) . "\n";
 		$str .= $indent . "Parameter Descriptors:\n";
 		my $nb = 0;
@@ -843,36 +887,40 @@ sub stringify {
 			$XPT::param_problems = 1;
 		}
 		$str .= $self->{result}->stringify($new_indent);
-	} else {
+	}
+	else {
 		$str .= substr($indent, 6);
-		$str .= ($self->{is_getter} ? "G" :  " ");
-		$str .= ($self->{is_setter} ? "S" :  " ");
-		$str .= ($self->{is_hidden} ? "H" :  " ");
-		$str .= ($self->{is_not_xpcom} ? "N" :  " ");
-		$str .= ($self->{is_constructor} ? "C" :  " ");
-		$str .= " " . $self->{result}->{type}->stringify() . " " . $self->{name} . "(";
+		$str .= ($self->{is_getter} ? 'G' :  q{ });
+		$str .= ($self->{is_setter} ? 'S' :  q{ });
+		$str .= ($self->{is_hidden} ? 'H' :  q{ });
+		$str .= ($self->{is_not_xpcom} ? 'N' :  q{ });
+		$str .= ($self->{is_constructor} ? 'C' :  q{ });
+		$str .= q{ } . $self->{result}->{type}->stringify() . q{ } . $self->{name} . '(';
 		my $first = 1;
 		foreach (@{$self->{params}})  {
-			$str .= ", " unless ($first);
+			$str .= ', ' unless ($first);
 			if ($_->{in}) {
-				$str .= "in";
+				$str .= 'in';
 				if ($_->{out}) {
-					$str .= "out ";
-					$str .= "retval " if ($_->{retval});
-					$str .= "shared " if ($_->{shared});
-				} else {
-					$str .= " ";
-					$str .= "dipper " if ($_->{dipper});
-					$str .= "retval " if ($_->{retval});
+					$str .= 'out ';
+					$str .= 'retval ' if ($_->{retval});
+					$str .= 'shared ' if ($_->{shared});
 				}
-			} else {
+				else {
+					$str .= q{ };
+					$str .= 'dipper ' if ($_->{dipper});
+					$str .= 'retval ' if ($_->{retval});
+				}
+			}
+			else {
 				if ($_->{out}) {
-					$str .= "out ";
-					$str .= "retval " if ($_->{retval});
-					$str .= "shared " if ($_->{shared});
-				} else {
+					$str .= 'out ';
+					$str .= 'retval ' if ($_->{retval});
+					$str .= 'shared ' if ($_->{shared});
+				}
+				else {
 					$XPT::params_problems = 1;
-					$str .= "XXX ";
+					$str .= 'XXX ';
 				}
 			}
 			$str .= $_->{type}->stringify();
@@ -921,15 +969,15 @@ sub marshal {
 sub stringify {			# allways VERBOSE
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "  " unless (defined $indent);
-	my $new_indent = $indent . "   ";
+	$indent = q{  } unless (defined $indent);
+	my $new_indent = $indent . q{   };
 
-	my $str = "";
-	$str .= $indent . "In Param?   " . ($self->{in} ? "TRUE" : "FALSE") . "\n";
-	$str .= $indent . "Out Param?  " . ($self->{out} ? "TRUE" : "FALSE") . "\n";
-	$str .= $indent . "Retval?     " . ($self->{retval} ? "TRUE" : "FALSE") . "\n";
-	$str .= $indent . "Shared?     " . ($self->{shared} ? "TRUE" : "FALSE") . "\n";
-	$str .= $indent . "Dipper?     " . ($self->{dipper} ? "TRUE" : "FALSE") . "\n";
+	my $str = q{};
+	$str .= $indent . "In Param?   " . ($self->{in} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $indent . "Out Param?  " . ($self->{out} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $indent . "Retval?     " . ($self->{retval} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $indent . "Shared?     " . ($self->{shared} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $indent . "Dipper?     " . ($self->{dipper} ? 'TRUE' : 'FALSE') . "\n";
 	$str .= $indent . "Type Descriptor:\n";
 	$str .= $self->{type}->stringify($new_indent);
 	return $str;
@@ -944,36 +992,36 @@ use base qw(XPT);
 use Carp;
 
 use constant TYPE_ARRAY => [
-	"int8",        "int16",       "int32",       "int64",
-	"uint8",       "uint16",      "uint32",      "uint64",
-	"float",       "double",      "boolean",     "char",
-	"wchar_t",     "void",        "reserved",    "reserved",
-	"reserved",    "reserved",    "reserved",    "reserved",
-	"reserved",    "reserved",    "reserved",    "reserved",
-	"reserved",    "reserved",    "reserved",    "reserved",
-	"reserved",    "reserved",    "reserved",    "reserved"
+	'int8',        'int16',       'int32',       'int64',
+	'uint8',       'uint16',      'uint32',      'uint64',
+	'float',       'double',      'boolean',     'char',
+	'wchar_t',     'void',        'reserved',    'reserved',
+	'reserved',    'reserved',    'reserved',    'reserved',
+	'reserved',    'reserved',    'reserved',    'reserved',
+	'reserved',    'reserved',    'reserved',    'reserved',
+	'reserved',    'reserved',    'reserved',    'reserved'
 ];
 
 use constant PTYPE_ARRAY => [
-	"int8 *",      "int16 *",     "int32 *",     "int64 *",
-	"uint8 *",     "uint16 *",    "uint32 *",    "uint64 *",
-	"float *",     "double *",    "boolean *",   "char *",
-	"wchar_t *",   "void *",      "nsIID *",     "DOMString *",
-	"string",      "wstring",     "Interface *", "InterfaceIs *",
-	"array",       "string_s",    "wstring_s",   "UTF8String *",
-	"CString *",   "AString *",   "reserved",    "reserved",
-	"reserved",    "reserved",    "reserved",    "reserved"
+	'int8 *',      'int16 *',     'int32 *',     'int64 *',
+	'uint8 *',     'uint16 *',    'uint32 *',    'uint64 *',
+	'float *',     'double *',    'boolean *',   'char *',
+	'wchar_t *',   'void *',      'nsIID *',     'DOMString *',
+	'string',      'wstring',     'Interface *', 'InterfaceIs *',
+	'array',       'string_s',    'wstring_s',   'UTF8String *',
+	'CString *',   'AString *',   'reserved',    'reserved',
+	'reserved',    'reserved',    'reserved',    'reserved'
 ];
 
 use constant RTYPE_ARRAY => [
-	"int8 &",      "int16 &",     "int32 &",     "int64 &",
-	"uint8 &",     "uint16 &",    "uint32 &",    "uint64 &",
-	"float &",     "double &",    "boolean &",   "char &",
-	"wchar_t &",   "void &",      "nsIID &",     "DOMString &",
-	"string &",    "wstring &",   "Interface &", "InterfaceIs &",
-	"array &",     "string_s &",  "wstring_s &", "UTF8String &",
-	"CString &",   "AString &",   "reserved",    "reserved",
-	"reserved",    "reserved",    "reserved",    "reserved"
+	'int8 &',      'int16 &',     'int32 &',     'int64 &',
+	'uint8 &',     'uint16 &',    'uint32 &',    'uint64 &',
+	'float &',     'double &',    'boolean &',   'char &',
+	'wchar_t &',   'void &',      'nsIID &',     'DOMString &',
+	'string &',    'wstring &',   'Interface &', 'InterfaceIs &',
+	'array &',     'string_s &',  'wstring_s &', 'UTF8String &',
+	'CString &',   'AString &',   'reserved',    'reserved',
+	'reserved',    'reserved',    'reserved',    'reserved'
 ];
 
 sub demarshal {
@@ -988,33 +1036,39 @@ sub demarshal {
 			tag						=> $flags & 0x1f,
 	);
 
-	if      ($type->{tag} <  XPT::InterfaceTypeDescriptor) {
+	if    ($type->{tag} <  XPT::InterfaceTypeDescriptor) {
 		# SimpleTypeDescriptor
-	} elsif ($type->{tag} == XPT::InterfaceTypeDescriptor) {
+	}
+	elsif ($type->{tag} == XPT::InterfaceTypeDescriptor) {
 		croak "is_pointer is not set!\n"
 				unless ($type->{is_pointer});
 		$type->{interface_index} = XPT::Read16($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::InterfaceIsTypeDescriptor) {
+	}
+	elsif ($type->{tag} == XPT::InterfaceIsTypeDescriptor) {
 		croak "is_pointer is not set!\n"
 				unless ($type->{is_pointer});
 		$type->{arg_num} = XPT::Read8($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::ArrayTypeDescriptor) {
+	}
+	elsif ($type->{tag} == XPT::ArrayTypeDescriptor) {
 		croak "is_pointer is not set!\n"
 				unless ($type->{is_pointer});
 		$type->{size_is_arg_num} = XPT::Read8($r_buffer, $r_offset);
 		$type->{length_is_arg_num} = XPT::Read8($r_buffer, $r_offset);
 		$type->{type_descriptor} = XPT::TypeDescriptor::demarshal($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::StringWithSizeTypeDescriptor) {
+	}
+	elsif ($type->{tag} == XPT::StringWithSizeTypeDescriptor) {
 		croak "is_pointer is not set!\n"
 				unless ($type->{is_pointer});
 		$type->{size_is_arg_num} = XPT::Read8($r_buffer, $r_offset);
 		$type->{length_is_arg_num} = XPT::Read8($r_buffer, $r_offset);
-	} elsif ($type->{tag} == XPT::WideStringWithSizeTypeDescriptor) {
+	}
+	elsif ($type->{tag} == XPT::WideStringWithSizeTypeDescriptor) {
 		croak "is_pointer is not set!\n"
 				unless ($type->{is_pointer});
 		$type->{size_is_arg_num} = XPT::Read8($r_buffer, $r_offset);
 		$type->{length_is_arg_num} = XPT::Read8($r_buffer, $r_offset);
-	} else {
+	}
+	else {
 		# reserved
 	}
 	return $type;
@@ -1027,23 +1081,29 @@ sub marshal {
 	$flags |= 0x40 if ($self->{is_unique_pointer});
 	$flags |= 0x20 if ($self->{is_reference});
 	my $buffer = XPT::Write8($flags);
-	if      ($self->{tag} <  XPT::InterfaceTypeDescriptor) {
+	if    ($self->{tag} <  XPT::InterfaceTypeDescriptor) {
 		# SimpleTypeDescriptor
-	} elsif ($self->{tag} == XPT::InterfaceTypeDescriptor) {
+	}
+	elsif ($self->{tag} == XPT::InterfaceTypeDescriptor) {
 		$buffer .= XPT::Write16($self->{interface_index});
-	} elsif ($self->{tag} == XPT::InterfaceIsTypeDescriptor) {
+	}
+	elsif ($self->{tag} == XPT::InterfaceIsTypeDescriptor) {
 		$buffer .= XPT::Write8($self->{arg_num});
-	} elsif ($self->{tag} == XPT::ArrayTypeDescriptor) {
+	}
+	elsif ($self->{tag} == XPT::ArrayTypeDescriptor) {
 		$buffer .= XPT::Write8($self->{size_is_arg_num});
 		$buffer .= XPT::Write8($self->{length_is_arg_num});
 		$buffer .= $self->{type_descriptor}->marshal();
-	} elsif ($self->{tag} == XPT::StringWithSizeTypeDescriptor) {
+	}
+	elsif ($self->{tag} == XPT::StringWithSizeTypeDescriptor) {
 		$buffer .= XPT::Write8($self->{size_is_arg_num});
 		$buffer .= XPT::Write8($self->{length_is_arg_num});
-	} elsif ($self->{tag} == XPT::WideStringWithSizeTypeDescriptor) {
+	}
+	elsif ($self->{tag} == XPT::WideStringWithSizeTypeDescriptor) {
 		$buffer .= XPT::Write8($self->{size_is_arg_num});
 		$buffer .= XPT::Write8($self->{length_is_arg_num});
-	} else {
+	}
+	else {
 		# reserved
 	}
 	return $buffer;
@@ -1054,13 +1114,13 @@ sub stringify {
 	return $self->_get_string()
 			unless ($XPT::stringify_verbose);
 	my ($indent) = @_;
-	$indent = "  " unless (defined $indent);
-	my $new_indent = $indent . "   ";
+	$indent = q{  } unless (defined $indent);
+	my $new_indent = $indent . q{   };
 
-	my $str = "";
-	$str .= $indent . "Is Pointer?        " . ($self->{is_pointer} ? "TRUE" : "FALSE") . "\n";
-	$str .= $indent . "Is Unique Pointer? " . ($self->{is_unique_pointer} ? "TRUE" : "FALSE") . "\n";
-	$str .= $indent . "Is Reference?      " . ($self->{is_reference} ? "TRUE" : "FALSE") . "\n";
+	my $str = q{};
+	$str .= $indent . "Is Pointer?        " . ($self->{is_pointer} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $indent . "Is Unique Pointer? " . ($self->{is_unique_pointer} ? 'TRUE' : 'FALSE') . "\n";
+	$str .= $indent . "Is Reference?      " . ($self->{is_reference} ? 'TRUE' : 'FALSE') . "\n";
 	$str .= $indent . "Tag:               " . $self->{tag} . "\n";
 
 	if       ( $self->{tag} == XPT::StringWithSizeTypeDescriptor
@@ -1083,23 +1143,27 @@ sub _get_string {
 	my $self = shift;
 
 	if ($self->{tag} == XPT::ArrayTypeDescriptor) {
-		return $self->{type_descriptor}->_get_string() . " []";
+		return $self->{type_descriptor}->_get_string() . ' []';
 	}
 
-	my $str = "";
+	my $str = q{};
 	if ($self->{tag} == XPT::InterfaceTypeDescriptor) {
 		if (defined $self->{interface}) {
 			$str = $self->{interface}->{name};
-		} else {
-			$str = "UNKNOWN_INTERFACE";
 		}
-	} elsif ($self->{is_pointer}) {
+		else {
+			$str = 'UNKNOWN_INTERFACE';
+		}
+	}
+	elsif ($self->{is_pointer}) {
 		if ($self->{is_reference}) {
 			$str = RTYPE_ARRAY->[$self->{tag}];
-		} else {
+		}
+		else {
 			$str = PTYPE_ARRAY->[$self->{tag}];
 		}
-	} else {
+	}
+	else {
 		$str = TYPE_ARRAY->[$self->{tag}];
 	}
 
@@ -1129,7 +1193,8 @@ sub demarshal {
 				creator					=> $creator,
 				private_data			=> $private_data,
 		);
-	} else {
+	}
+	else {
 		return new XPT::Annotation(
 				is_last					=> ($flags & 0x80) ? 1 : 0,
 				tag						=> 0,
@@ -1152,20 +1217,22 @@ sub marshal {
 sub stringify {
 	my $self = shift;
 	my ($indent) = @_;
-	$indent = "   " unless (defined $indent);
-	my $new_indent = $indent . "   ";
+	$indent = q{   } unless (defined $indent);
+	my $new_indent = $indent . q{   };
 
-	my $str = "";
+	my $str = q{};
 	if ($self->{tag}) {
 		if ($XPT::stringify_verbose) {
 			$str .= " is private.\n";
-		} else {
+		}
+		else {
 			$str .= ":\n";
 		}
-		$indent .= "   ";
+		$indent .= q{   };
 		$str .= $new_indent . "Creator:      " . $self->{creator} . "\n";
 		$str .= $new_indent . "Private Data: " . $self->{private_data} . "\n";
-	} else {
+	}
+	else {
 		$str .= " is empty.\n";
 	}
 	return $str;
@@ -1207,12 +1274,12 @@ sub marshal {
 
 sub stringify {
 	my $self = shift;
-	my $str = "";
+	my $str = q{};
 	my $idx = 0;
 	foreach (split //, ${$self}) {
 		$str .= sprintf("%02x", ord $_);
 		$idx ++;
-		$str .= "-" if ($idx == 4 or $idx == 6 or $idx == 8 or $idx == 10);
+		$str .= '-' if ($idx == 4 or $idx == 6 or $idx == 8 or $idx == 10);
 	}
 	return $str;
 }
@@ -1242,11 +1309,13 @@ sub new {
 	my $filename;
 	if ($parser->YYData->{opt_e}) {
 		$filename = $parser->YYData->{opt_e};
-	} else {
+	}
+	else {
 		if ($parser->YYData->{opt_o}) {
-			$filename = $parser->YYData->{opt_o} . ".xpt";
-		} else {
-			$filename = basename($self->{srcname}, ".idl") . ".xpt";
+			$filename = $parser->YYData->{opt_o} . '.xpt';
+		}
+		else {
+			$filename = basename($self->{srcname}, '.idl') . '.xpt';
 		}
 	}
 	$self->{outfile} = $filename;
@@ -1258,7 +1327,8 @@ sub _get_defn {
 	my ($defn) = @_;
 	if (ref $defn) {
 		return $defn;
-	} else {
+	}
+	else {
 		return $self->{symbtab}->Lookup($defn);
 	}
 }
@@ -1266,10 +1336,10 @@ sub _get_defn {
 sub _is_dipper {
 	my $self = shift;
 	my ($node) = @_;	# type
-	return     $node->hasProperty("domstring")
-			|| $node->hasProperty("utf8string")
-			|| $node->hasProperty("cstring")
-			|| $node->hasProperty("astring");
+	return     $node->hasProperty('domstring')
+			|| $node->hasProperty('utf8string')
+			|| $node->hasProperty('cstring')
+			|| $node->hasProperty('astring');
 }
 
 sub _arg_num {
@@ -1305,13 +1375,13 @@ sub visitSpecification {
 	$self->{xpt}->indexe();
 
 	if ($self->{emit_typelib_annotations}) {
-		my $creator = "xpidl.pl " . $CORBA::XPIDL::check::VERSION;
+		my $creator = 'xpidl ' . $CORBA::XPIDL::VERSION;
 		my $data = "Created from " . $self->{srcname} .
 		           "\nCreation date: " . POSIX::ctime(time()) . "Interfaces:";
 		foreach (sort keys %{$self->{xpt}->{interface_iid}}) {
 			my $itf = ${$self->{xpt}->{interface_iid}}{$_};
 			next unless (defined $itf->{interface_descriptor});
-			$data .= " " . $itf->{name};
+			$data .= q{ } . $itf->{name};
 		}
 		my $anno = new XPT::Annotation(
 				tag						=> 1,
@@ -1323,11 +1393,11 @@ sub visitSpecification {
 	$self->{xpt}->terminate_annotations();
 
 #	print $self->{xpt}->stringify();
-	open OUT, ">$self->{outfile}"
+	open my $OUT, '>', $self->{outfile}
 			or die "FAILED: can't open $self->{outfile}\n";
-	binmode OUT, ":raw";
-	print OUT $self->{xpt}->marshal();
-	close OUT;
+	binmode $OUT, ':raw';
+	print $OUT $self->{xpt}->marshal();
+	close $OUT;
 }
 
 #
@@ -1363,16 +1433,16 @@ sub visitRegularInterface {
 		my $parent_interface_name;
 		if (exists $node->{inheritance}) {
 			my $base = $self->_get_defn(${$node->{inheritance}->{list_interface}}[0]);
-			my $namespace = $base->getProperty("namespace") || "";
-			$parent_interface_name = $namespace . "::" . $base->{idf};
+			my $namespace = $base->getProperty('namespace') || q{};
+			$parent_interface_name = $namespace . '::' . $base->{idf};
 			$self->_add_interface($base);
 		}
 		my $interface_descriptor = new XPT::InterfaceDescriptor(
 				parent_interface		=> $parent_interface_name,
 				method_descriptors		=> [],
 				const_descriptors		=> [],
-				is_scriptable			=> $node->hasProperty("scriptable"),
-				is_function				=> $node->hasProperty("function"),
+				is_scriptable			=> $node->hasProperty('scriptable'),
+				is_function				=> $node->hasProperty('function'),
 		);
 		$self->{itf} = $interface_descriptor;
 		foreach (@{$node->{list_decl}}) {
@@ -1386,17 +1456,17 @@ sub _add_interface {
 	my $self = shift;
 	my ($node, $desc) = @_;
 	my $iid = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-	my $str_iid = $node->getProperty("uuid");
+	my $str_iid = $node->getProperty('uuid');
 	if (defined $str_iid) {
 		$str_iid =~ s/-//g;
-		$iid = "";
+		$iid = q{};
 		while ($str_iid) {
 			$iid .= chr(hex(substr $str_iid, 0, 2));
 			$str_iid = substr $str_iid, 2;
 		}
 	}
 	my $name = $node->{idf};
-	my $namespace = $node->getProperty("namespace") || "";
+	my $namespace = $node->getProperty('namespace') || q{};
 	my $entry = new XPT::InterfaceDirectoryEntry(
 			iid						=> new XPT::IID($iid),
 			name					=> $name,
@@ -1456,141 +1526,168 @@ sub _type {
 	my $self = shift;
 	my ($node, $param, $method) = @_;
 
-	my $is_array = defined $method && $param->hasProperty("array");
+	my $is_array = defined $method && $param->hasProperty('array');
 	my $type = $node;
 	while ($type->isa('TypeDeclarator')) {
 		$type = $self->_get_defn($type->{type});
 	}
 	my %hash;
-	my $iid_is = $param->getProperty("iid_is") if (defined $param);
+	my $iid_is = $param->getProperty('iid_is') if (defined $param);
 
 	if (     $type->isa('IntegerType')) {
-		if      ($type->{value} eq 'short') {
+		if    ($type->{value} eq 'short') {
 			$hash{tag} = XPT::int16;
-		} elsif ($type->{value} eq 'unsigned short') {
+		}
+		elsif ($type->{value} eq 'unsigned short') {
 			$hash{tag} = XPT::uint16;
-		} elsif ($type->{value} eq 'long') {
+		}
+		elsif ($type->{value} eq 'long') {
 			$hash{tag} = XPT::int32;
-		} elsif ($type->{value} eq 'unsigned long') {
+		}
+		elsif ($type->{value} eq 'unsigned long') {
 			$hash{tag} = XPT::uint32;
-		} elsif ($type->{value} eq 'long long') {
+		}
+		elsif ($type->{value} eq 'long long') {
 			$hash{tag} = XPT::int64;
-		} elsif ($type->{value} eq 'unsigned long long') {
+		}
+		elsif ($type->{value} eq 'unsigned long long') {
 			$hash{tag} = XPT::uint64;
-		} else {
+		}
+		else {
 			warn __PACKAGE__,"::_type (IntegerType) $node->{value}.\n";
 		}
-	} elsif ($type->isa('OctetType')) {
+	}
+	elsif ($type->isa('OctetType')) {
 		$hash{tag} = XPT::uint8;
-	} elsif ($type->isa('FloatingPtType')) {
-		if (     $type->{value} eq "float") {
+	}
+	elsif ($type->isa('FloatingPtType')) {
+		if (   $type->{value} eq 'float') {
 			$hash{tag} = XPT::float;
-		} elsif ($type->{value} eq "double") {
+		}
+		elsif ($type->{value} eq 'double') {
 			$hash{tag} = XPT::double;
-		} else {
+		}
+		else {
 			warn __PACKAGE__,"::_type (FloatingPtType) $node->{value}.\n";
 		}
-	} elsif ($type->isa('BooleanType')) {
+	}
+	elsif ($type->isa('BooleanType')) {
 		$hash{tag} = XPT::boolean;
-	} elsif ($type->isa('CharType')) {
+	}
+	elsif ($type->isa('CharType')) {
 		$hash{tag} = XPT::char;
-	} elsif ($type->isa('WideCharType')) {
+	}
+	elsif ($type->isa('WideCharType')) {
 		$hash{tag} = XPT::wchar_t;
-	} elsif ($type->isa('StringType')) {
-		my $size_is = $param->getProperty("size_is")
+	}
+	elsif ($type->isa('StringType')) {
+		my $size_is = $param->getProperty('size_is')
 				if (defined $param);
 		if ($is_array or !defined $method or !defined $size_is) {
 			$hash{tag} = XPT::pstring;
 			$hash{is_pointer} = 1;
-		} else {
+		}
+		else {
 			$hash{tag} = XPT::StringWithSizeTypeDescriptor;
 			$hash{is_pointer} = 1;
 			$hash{size_is_arg_num} = $self->_arg_num($size_is, $method);
 			$hash{length_is_arg_num} = $hash{size_is_arg_num};
-			my $length_is = $param->getProperty("length_is");
+			my $length_is = $param->getProperty('length_is');
 			$hash{length_is_arg_num} = $self->_arg_num($length_is, $method)
 					if (defined $length_is);
 		}
-	} elsif ($type->isa('WideStringType')) {
-		my $size_is = $param->getProperty("size_is")
+	}
+	elsif ($type->isa('WideStringType')) {
+		my $size_is = $param->getProperty('size_is')
 				if (defined $param);
 		if ($is_array or !defined $method or !defined $size_is) {
 			$hash{tag} = XPT::pwstring;
 			$hash{is_pointer} = 1;
-		} else {
+		}
+		else {
 			$hash{tag} = XPT::WideStringWithSizeTypeDescriptor;
 			$hash{is_pointer} = 1;
 			$hash{size_is_arg_num} = $self->_arg_num($size_is, $method);
 			$hash{length_is_arg_num} = $hash{size_is_arg_num};
-			my $length_is = $param->getProperty("length_is");
+			my $length_is = $param->getProperty('length_is');
 			$hash{length_is_arg_num} = $self->_arg_num($length_is, $method)
 					if (defined $length_is);
 		}
-	} elsif ($type->isa('NativeType') and !defined $iid_is) {
-		if      ($node->hasProperty("nsid")) {
+	}
+	elsif ($type->isa('NativeType') and !defined $iid_is) {
+		if      ($node->hasProperty('nsid')) {
 			$hash{tag} = XPT::nsIID;
-			if      ($node->hasProperty("ref")) {
+			if    ($node->hasProperty('ref')) {
 				$hash{is_pointer} = 1;
 				$hash{is_reference} = 1;
-			} elsif ($node->hasProperty("ptr")) {
+			}
+			elsif ($node->hasProperty('ptr')) {
 				$hash{is_pointer} = 1;
 			}
-		} elsif ($node->hasProperty("domstring")) {
+		}
+		elsif ($node->hasProperty('domstring')) {
 			$hash{tag} = XPT::domstring;
 			$hash{is_pointer} = 1;
-			if ($node->hasProperty("ref")) {
+			if ($node->hasProperty('ref')) {
 				$hash{is_reference} = 1;
 			}
-		} elsif ($node->hasProperty("astring")) {
+		}
+		elsif ($node->hasProperty('astring')) {
 			$hash{tag} = XPT::astring;
 			$hash{is_pointer} = 1;
-			if ($node->hasProperty("ref")) {
+			if ($node->hasProperty('ref')) {
 				$hash{is_reference} = 1;
 			}
-		} elsif ($node->hasProperty("utf8string")) {
+		}
+		elsif ($node->hasProperty('utf8string')) {
 			$hash{tag} = XPT::utf8string;
 			$hash{is_pointer} = 1;
-			if ($node->hasProperty("ref")) {
+			if ($node->hasProperty('ref')) {
 				$hash{is_reference} = 1;
 			}
-		} elsif ($node->hasProperty("cstring")) {
+		}
+		elsif ($node->hasProperty('cstring')) {
 			$hash{tag} = XPT::cstring;
 			$hash{is_pointer} = 1;
-			if ($node->hasProperty("ref")) {
+			if ($node->hasProperty('ref')) {
 				$hash{is_reference} = 1;
 			}
-		} else {
+		}
+		else {
 			$hash{tag} = XPT::void;
 			$hash{is_pointer} = 1;
 		}
-	} elsif (  $type->isa('RegularInterface')
+	}
+	elsif (    $type->isa('RegularInterface')
 			or $type->isa('ForwardRegularInterface')
 			or $type->isa('NativeType') ) {
 		if (defined $iid_is) {
 			$hash{tag} = XPT::InterfaceIsTypeDescriptor;
 			$hash{is_pointer} = 1;
 			$hash{arg_num} = $self->_arg_num($iid_is, $method);
-		} else {
+		}
+		else {
 			$self->_add_interface($type);
-			my $namespace = $type->getProperty("namespace") || "";
-			$hash{interface} = $namespace . "::" . $type->{idf};
+			my $namespace = $type->getProperty('namespace') || q{};
+			$hash{interface} = $namespace . '::' . $type->{idf};
 			$hash{tag} = XPT::InterfaceTypeDescriptor;
 			$hash{is_pointer} = 1;
 		}
-	} elsif ($type->isa('VoidType')) {
+	}
+	elsif ($type->isa('VoidType')) {
 		$hash{tag} = XPT::void;
 	}
 	my $desc = new XPT::TypeDescriptor( %hash );
 
 	if ($is_array) {
 		# size_is is required
-		my $size_is = $param->getProperty("size_is");
+		my $size_is = $param->getProperty('size_is');
 #		die "[array] requires [size_is()].\n"
 #				unless (defined $size_is);
 		my $size_is_arg_num = $self->_arg_num($size_is, $method);
 		# length_is is optional
 		my $length_is_arg_num = $size_is_arg_num;
-		my $length_is = $param->getProperty("length_is");
+		my $length_is = $param->getProperty('length_is');
 		$length_is_arg_num = $self->_arg_num($size_is, $method)
 				if (defined $length_is);
 		return new XPT::TypeDescriptor(
@@ -1602,7 +1699,8 @@ sub _type {
 				length_is_arg_num		=> $length_is_arg_num,
 				type_descriptor			=> $desc,
 		);
-	} else {
+	}
+	else {
 		return $desc
 	}
 }
@@ -1638,7 +1736,7 @@ sub visitException {
 sub visitOperation {
 	my $self = shift;
 	my ($node) = @_;
-	my $notxpcom = $node->hasProperty("notxpcom");
+	my $notxpcom = $node->hasProperty('notxpcom');
 	my @params = ();
 	foreach (@{$node->{list_param}}) {
 		push @params, $self->_param($_, $node);
@@ -1654,7 +1752,8 @@ sub visitOperation {
 				dipper					=> 0,
 				type					=> $self->_type($type),
 		);
-	} else {
+	}
+	else {
 		unless ($type->isa('VoidType')) {
 			my $dipper = $self->_is_dipper($type);
 			my $desc = $self->_type($type);
@@ -1675,7 +1774,7 @@ sub visitOperation {
 			is_setter				=> 0,
 			is_not_xpcom			=> $notxpcom,
 			is_constructor			=> 0,
-			is_hidden				=> $node->hasProperty("noscript"),
+			is_hidden				=> $node->hasProperty('noscript'),
 			name					=> $node->{idf},
 			params					=> \@params,
 			result					=> $result,
@@ -1689,11 +1788,13 @@ sub _param {
 	my $type = $self->_get_defn($node->{type});
 	my $in = 0;
 	my $out = 0;
-	if ($node->{attr} eq "in") {
+	if ($node->{attr} eq 'in') {
 		$in = 1;
-	} elsif ($node->{attr} eq "out") {
+	}
+	elsif ($node->{attr} eq 'out') {
 		$out = 1;
-	} elsif ($node->{attr} eq "inout") {
+	}
+	elsif ($node->{attr} eq 'inout') {
 		$in = 1;
 		$out = 1;
 	}
@@ -1707,8 +1808,8 @@ sub _param {
 	return new XPT::ParamDescriptor(
 			in						=> $in,
 			out						=> $out,
-			retval					=> $node->hasProperty("retval"),
-			shared					=> $node->hasProperty("shared"),
+			retval					=> $node->hasProperty('retval'),
+			shared					=> $node->hasProperty('shared'),
 			dipper					=> $dipper,
 			type					=> $desc,
 	);
@@ -1751,10 +1852,10 @@ sub visitAttribute {
 	my $getter = new XPT::MethodDescriptor(
 			is_getter				=> 1,
 			is_setter				=> 0,
-#			is_not_xpcom			=> $node->hasProperty("notxpcom"),
+#			is_not_xpcom			=> $node->hasProperty('notxpcom'),
 			is_not_xpcom			=> 0,	# functionality or bug
 			is_constructor			=> 0,
-			is_hidden				=> $node->hasProperty("noscript"),
+			is_hidden				=> $node->hasProperty('noscript'),
 			name					=> $node->{idf},
 			params					=> [
 				new XPT::ParamDescriptor(
@@ -1773,10 +1874,10 @@ sub visitAttribute {
 		my $setter = new XPT::MethodDescriptor(
 				is_getter				=> 0,
 				is_setter				=> 1,
-#				is_not_xpcom			=> $node->hasProperty("notxpcom"),
+#				is_not_xpcom			=> $node->hasProperty('notxpcom'),
 				is_not_xpcom			=> 0,	# functionality or bug
 				is_constructor			=> 0,
-				is_hidden				=> $node->hasProperty("noscript"),
+				is_hidden				=> $node->hasProperty('noscript'),
 				name					=> $node->{idf},
 				params					=> [
 					new XPT::ParamDescriptor(

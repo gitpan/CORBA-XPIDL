@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use UNIVERSAL;
 
 package CORBA::XPIDL::headerVisitor;
@@ -17,11 +18,13 @@ sub new {
 	my $filename;
 	if ($parser->YYData->{opt_e}) {
 		$filename = $parser->YYData->{opt_e};
-	} else {
+	}
+	else {
 		if ($parser->YYData->{opt_o}) {
-			$filename = $parser->YYData->{opt_o} . ".h";
-		} else {
-			$filename = basename($self->{srcname}, ".idl") . ".h";
+			$filename = $parser->YYData->{opt_o} . '.h';
+		}
+		else {
+			$filename = basename($self->{srcname}, '.idl') . '.h';
 		}
 	}
 	$self->open_stream($filename);
@@ -32,9 +35,8 @@ sub new {
 sub open_stream {
 	my $self = shift;
 	my ($filename) = @_;
-	open(OUT, "> $filename")
+	open $self->{out}, '>', $filename
 			or die "can't open $filename ($!).\n";
-	$self->{out} = \*OUT;
 	$self->{filename} = $filename;
 }
 
@@ -43,7 +45,8 @@ sub _get_defn {
 	my ($defn) = @_;
 	if (ref $defn) {
 		return $defn;
-	} else {
+	}
+	else {
 		return $self->{symbtab}->Lookup($defn);
 	}
 }
@@ -51,10 +54,10 @@ sub _get_defn {
 sub _is_dipper {
 	my $self = shift;
 	my ($node) = @_;	# type
-	return     $node->hasProperty("domstring")
-			|| $node->hasProperty("utf8string")
-			|| $node->hasProperty("cstring")
-			|| $node->hasProperty("astring");
+	return     $node->hasProperty('domstring')
+			|| $node->hasProperty('utf8string')
+			|| $node->hasProperty('cstring')
+			|| $node->hasProperty('astring');
 }
 
 sub _classname_iid {
@@ -63,14 +66,14 @@ sub _classname_iid {
 	my $idf = $node->{idf};
 	$idf =~ s/^ns/NS_/;		# backcompat naming styles
 	my $classname = uc $idf;
-	$classname .= "_IID";
+	$classname .= '_IID';
 	return $classname;
 }
 
 sub _doc_comments {
 	my $self = shift;
 	my ($node) = @_;
-	return "" unless ($node->{doc});
+	return q{} unless ($node->{doc});
 	my $FH = $self->{out};
 	my @doc = split /\n/, $node->{doc};
 	shift @doc if ($doc[0] =~ /^\s*$/);
@@ -91,7 +94,7 @@ sub visitSpecification {
 	my ($node) = @_;
 	my $FH = $self->{out};
 
-	my $basename = basename($self->{srcname}, ".idl");
+	my $basename = basename($self->{srcname}, '.idl');
 	print $FH "/*\n";
 	print $FH " * DO NOT EDIT.  THIS FILE IS GENERATED FROM ",$self->{srcname},"\n";
 	print $FH " */\n";
@@ -102,7 +105,7 @@ sub visitSpecification {
 	if (scalar @{$self->{base_includes}}) {
 		print $FH "\n";
 		foreach (@{$self->{base_includes}}) {
-			my $basename = basename($_, ".idl") ;
+			my $basename = basename($_, '.idl') ;
 			print $FH "\n";
 			print $FH "#ifndef __gen_",$basename,"_h__\n";
 			print $FH "#include \"",$basename,".h\"\n";
@@ -174,15 +177,15 @@ sub visitRegularInterface {
 	my $FH = $self->{out};
 	if ($self->{srcname} eq $node->{filename}) {
 		my $classname = $node->{idf};
-		my $indent = "  ";
+		my $indent = q{  };
 		print $FH "\n";
 		print $FH "/* starting interface:    ",$classname," */\n";
-		my $name_space = $node->getProperty("namespace");
+		my $name_space = $node->getProperty('namespace');
 		if (defined $name_space) {
 			print $FH "/* namespace:             ",$name_space," */\n";
 			print $FH "/* fully qualified name:  ",$name_space,".",$classname," */\n";
 		}
-		my $iid = lc $node->getProperty("uuid");
+		my $iid = lc $node->getProperty('uuid');
 		my $classname_iid = $self->_classname_iid($node);
 		print $FH "#define ",$classname_iid,"_STR \"",$iid,"\"\n";
 		print $FH "\n";
@@ -210,7 +213,7 @@ sub visitRegularInterface {
 		}
 
 		# The interface declaration itself.
-		print $FH "class ",($keepvtable ? "" : "NS_NO_VTABLE "),$classname;
+		print $FH "class ",($keepvtable ? q{} : "NS_NO_VTABLE "),$classname;
 		if (exists $node->{inheritance}) {
 			print $FH " : ";
 			my $base = $self->_get_defn(${$node->{inheritance}->{list_interface}}[0]);
@@ -230,9 +233,10 @@ sub visitRegularInterface {
 		my @attribute_operation = ();
 		foreach (@{$node->{list_decl}}) {
 			my $defn = $self->_get_defn($_);
-			if       ($defn->isa('Operation')) {
+			if    ($defn->isa('Operation')) {
 				push @attribute_operation, $defn;
-			} elsif  ($defn->isa('Attributes')) {
+			}
+			elsif ($defn->isa('Attributes')) {
 				foreach (@{$defn->{list_decl}}) {
 					my $defn = $self->_get_defn($_);
 					push @attribute_operation, $defn;
@@ -252,20 +256,22 @@ sub visitRegularInterface {
 				print $FH "; \\\n" unless ($first);
 				if ($defn->isa('Operation')) {
 					print $FH $indent;
-					$self->_method($defn, "AS_DECL", "");
-				} else {
+					$self->_method($defn, 'AS_DECL', q{});
+				}
+				else {
 					print $FH $indent;
-					$self->_attr_getter($defn, "AS_DECL", "");
+					$self->_attr_getter($defn, 'AS_DECL', q{});
 					unless (exists $defn->{modifier}) {	# readonly
 						print $FH "; \\\n";
 						print $FH $indent;
-						$self->_attr_setter($defn, "AS_DECL", "");
+						$self->_attr_setter($defn, 'AS_DECL', q{});
 					}
 				}
 				$first = 0;
 			}
 			print $FH ";\n";
-		} else {
+		}
+		else {
 			print $FH "/* no methods! */\n";
 		}
 		print $FH "\n";
@@ -283,26 +289,28 @@ sub visitRegularInterface {
 				print $FH "; } \\\n" unless ($first);
 				if ($defn->isa('Operation')) {
 					print $FH $indent;
-					$self->_method($defn, "AS_DECL", "");
+					$self->_method($defn, 'AS_DECL', q{});
 					print $FH " { return _to ";
-					$self->_method($defn, "AS_CALL", "");
-				} else {
+					$self->_method($defn, 'AS_CALL', q{});
+				}
+				else {
 					print $FH $indent;
-					$self->_attr_getter($defn, "AS_DECL", "");
+					$self->_attr_getter($defn, 'AS_DECL', q{});
 					print $FH " { return _to ";
-					$self->_attr_getter($defn, "AS_CALL", "");
+					$self->_attr_getter($defn, 'AS_CALL', q{});
 					unless (exists $defn->{modifier}) {	# readonly
 						print $FH "; } \\\n";
 						print $FH $indent;
-						$self->_attr_setter($defn, "AS_DECL", "");
+						$self->_attr_setter($defn, 'AS_DECL', q{});
 						print $FH " { return _to ";
-						$self->_attr_setter($defn, "AS_CALL", "");
+						$self->_attr_setter($defn, 'AS_CALL', q{});
 					}
 				}
 				$first = 0;
 			}
 			print $FH "; }\n";
-		} else {
+		}
+		else {
 			print $FH "/* no methods! */\n";
 		}
 		print $FH "\n";
@@ -320,26 +328,28 @@ sub visitRegularInterface {
 				print $FH "; } \\\n" unless ($first);
 				if ($defn->isa('Operation')) {
 					print $FH $indent;
-					$self->_method($defn, "AS_DECL", "");
+					$self->_method($defn, 'AS_DECL', q{});
 					print $FH " { return !_to ? NS_ERROR_NULL_POINTER : _to->";
-					$self->_method($defn, "AS_CALL", "");
-				} else {
+					$self->_method($defn, 'AS_CALL', q{});
+				}
+				else {
 					print $FH $indent;
-					$self->_attr_getter($defn, "AS_DECL", "");
+					$self->_attr_getter($defn, 'AS_DECL', q{});
 					print $FH " { return !_to ? NS_ERROR_NULL_POINTER : _to->";
-					$self->_attr_getter($defn, "AS_CALL", "");
+					$self->_attr_getter($defn, 'AS_CALL', q{});
 					unless (exists $defn->{modifier}) {	# readonly
 						print $FH "; } \\\n";
 						print $FH $indent;
-						$self->_attr_setter($defn, "AS_DECL", "");
+						$self->_attr_setter($defn, 'AS_DECL', q{});
 						print $FH " { return !_to ? NS_ERROR_NULL_POINTER : _to->";
-						$self->_attr_setter($defn, "AS_CALL", "");
+						$self->_attr_setter($defn, 'AS_CALL', q{});
 					}
 				}
 				$first = 0;
 			}
 			print $FH "; }\n";
-		} else {
+		}
+		else {
 			print $FH "/* no methods! */\n";
 		}
 		print $FH "\n";
@@ -347,9 +357,10 @@ sub visitRegularInterface {
 		# Build a sample implementation template.
 		my $classNameImpl;
 		if ($classname =~ /^..I/) {
-			$classNameImpl = substr($classname,0,2) . substr($classname,3);
-		} else {
-			$classNameImpl = "_MYCLASS_";
+			$classNameImpl = substr($classname, 0, 2) . substr($classname, 3);
+		}
+		else {
+			$classNameImpl = '_MYCLASS_';
 		}
 		print $FH "#if 0\n";
 		print $FH "/* Use the code below as a template for the implementation class for this interface. */\n";
@@ -382,21 +393,22 @@ sub visitRegularInterface {
 		foreach my $defn (@attribute_operation) {
 			if ($defn->isa('Operation')) {
 				$self->_doc_comments($defn);
-				$self->_method($defn, "AS_IMPL", $classNameImpl);
+				$self->_method($defn, 'AS_IMPL', $classNameImpl);
 				print $FH "\n";
 				print $FH "{\n";
 				print $FH $indent,$indent,"return NS_ERROR_NOT_IMPLEMENTED;\n";
 				print $FH "}\n";
 				print $FH "\n";
-			} else {
+			}
+			else {
 				$self->_doc_comments($defn);
-				$self->_attr_getter($defn, "AS_IMPL", $classNameImpl);
+				$self->_attr_getter($defn, 'AS_IMPL', $classNameImpl);
 				print $FH "\n";
 				print $FH "{\n";
 				print $FH $indent,$indent,"return NS_ERROR_NOT_IMPLEMENTED;\n";
 				print $FH "}\n";
 				unless (exists $defn->{modifier}) {	# readonly
-					$self->_attr_setter($defn, "AS_IMPL", $classNameImpl);
+					$self->_attr_setter($defn, 'AS_IMPL', $classNameImpl);
 					print $FH "\n";
 					print $FH "{\n";
 					print $FH $indent,$indent,"return NS_ERROR_NOT_IMPLEMENTED;\n";
@@ -439,13 +451,13 @@ sub visitConstant {
 	my ($node) = @_;
 	my $FH = $self->{out};
 	$self->_doc_comments($node);
-	my $indent = "  ";
+	my $indent = q{  };
 	my $value = $node->{value}->{value};
 	my $type = $self->_get_defn($node->{type});
 	while ($type->isa('TypeDeclarator')) {
 		$type = $self->_get_defn($type->{type});
 	}
-	$value .= "U" if (exists $type->{value} and $type->{value} =~ /^unsigned/);
+	$value .= 'U' if (exists $type->{value} and $type->{value} =~ /^unsigned/);
 	print $FH $indent,"enum { ",$node->{idf}," = ",$value," };\n";
 	print $FH "\n";
 }
@@ -529,9 +541,9 @@ sub visitOperation {
 	my ($node) = @_;
 	my $FH = $self->{out};
 	$self->_doc_comments($node);
-	my $indent = "  ";
+	my $indent = q{  };
 	print $FH $indent;
-	$self->_method($node, "AS_DECL", "");
+	$self->_method($node, 'AS_DECL', q{});
 	print $FH " = 0;\n";
 	print $FH "\n";
 }
@@ -547,27 +559,31 @@ sub _method {
 	my ($node, $mode, $className) = @_;
 	my $FH = $self->{out};
 	my $type = $self->_get_defn($node->{type});
-	my $op_notxpcom = $node->hasProperty("notxpcom");
+	my $op_notxpcom = $node->hasProperty('notxpcom');
 
-	if      ($mode eq "AS_DECL") {
+	if     ($mode eq 'AS_DECL') {
 		if ($op_notxpcom) {
 			print $FH "NS_IMETHOD_(",$type->{xp_name},")";
-		} else {
-			print $FH "NS_IMETHOD";
+		}
+		else {
+			print $FH 'NS_IMETHOD';
 		}
 		print $FH " ";
-	} elsif ($mode eq "AS_IMPL") {
+	}
+	elsif ($mode eq 'AS_IMPL') {
 		if ($op_notxpcom) {
 			print $FH "NS_IMETHODIMP_(",$type->{xp_name},")";
-		} else {
+		}
+		else {
 			print $FH "NS_IMETHODIMP";
 		}
 		print $FH " ";
 	}
 
-	if ($mode eq "AS_IMPL") {
+	if ($mode eq 'AS_IMPL') {
 		print $FH $className,"::",ucfirst($node->{idf}),"(";
-	} else {
+	}
+	else {
 		print $FH ucfirst($node->{idf}),"(";
 	}
 
@@ -575,9 +591,10 @@ sub _method {
 	foreach (@{$node->{list_param}}) {
 		next if ($_->isa('Ellipsis'));
 		print $FH ", " unless ($first);
-		if ($mode eq "AS_DECL" or $mode eq "AS_IMPL") {
+		if ($mode eq 'AS_DECL' or $mode eq 'AS_IMPL') {
 			$self->_param($_);
-		} else {
+		}
+		else {
 			print $FH $_->{idf};
 		}
 		$first = 0;
@@ -586,15 +603,16 @@ sub _method {
 	# make IDL return value into trailing out argument
 	if ( !$type->isa('VoidType') and !$op_notxpcom ) {
 		my $fake_param = _Build CORBA::IDL::node(
-				'attr'	=> "out",
+				'attr'	=> 'out',
 				'type'	=> $type,
-				'idf'	=> "_retval",
+				'idf'	=> '_retval',
 		);
-		bless($fake_param, "Parameter");
+		bless($fake_param, 'Parameter');
 		print $FH ", " unless ($first);
-		if ($mode eq "AS_DECL" or $mode eq "AS_IMPL") {
+		if ($mode eq 'AS_DECL' or $mode eq 'AS_IMPL') {
 			$self->_param($fake_param);
-		} else {
+		}
+		else {
 			print $FH "_retval";
 		}
 		$first = 0;
@@ -604,7 +622,7 @@ sub _method {
 	if (        scalar @{$node->{list_param}}
 			and ${$node->{list_param}}[-1]->isa('Ellipsis') ) {
 		print $FH ", " unless ($first);
-		if ($mode eq "AS_DECL" or $mode eq "AS_IMPL") {
+		if ($mode eq 'AS_DECL' or $mode eq 'AS_IMPL') {
 			print $FH "nsVarArgs *";
 		}
 		print $FH "_varargs";
@@ -613,7 +631,7 @@ sub _method {
 
 	# If generated method has no arguments, output 'void' to avoid C legacy
 	# behavior of disabling type checking.
-	if ($first and $mode eq "AS_DECL") {
+	if ($first and $mode eq 'AS_DECL') {
 		print $FH "void";
 	}
 
@@ -632,18 +650,19 @@ sub _param {
 
 	# in string, wstring, nsid, domstring, utf8string, cstring and
 	# astring any explicitly marked [const] are const
-	if (        $node->{attr} eq "in"
+	if (        $node->{attr} eq 'in'
 			and (  $type->isa('StringType')
 				or $type->isa('WideStringType')
-				or $node->hasProperty("const")
-				or $type->hasProperty("nsid")
-				or $type->hasProperty("domstring")
-				or $type->hasProperty("utf8string")
-				or $type->hasProperty("cstring")
-				or $type->hasProperty("astring") ) ) {
+				or $node->hasProperty('const')
+				or $type->hasProperty('nsid')
+				or $type->hasProperty('domstring')
+				or $type->hasProperty('utf8string')
+				or $type->hasProperty('cstring')
+				or $type->hasProperty('astring') ) ) {
 		print $FH "const ";
-	} elsif (   $node->{attr} eq "out"
-			and $node->hasProperty("shared") ) {
+	}
+	elsif (   $node->{attr} eq 'out'
+			and $node->hasProperty('shared') ) {
 		print $FH "const ";
 	}
 
@@ -659,14 +678,14 @@ sub _param {
 
 	# out and inout params get a bonus '*' (unless this is type that has a
 	# 'dipper' class that is passed in to receive 'out' data)
-	if (        $node->{attr} ne "in"
+	if (        $node->{attr} ne 'in'
 			and !$self->_is_dipper($type) ) {
 		print $FH "*";
 	}
 
 	# arrays get a bonus * too
 	# XXX Should this be a leading '*' or a trailing "[]" ?
-	if ($node->hasProperty("array")) {
+	if ($node->hasProperty('array')) {
 		print $FH "*";
 	}
 
@@ -690,13 +709,13 @@ sub visitAttribute {
 	my ($node) = @_;
 	my $FH = $self->{out};
 	$self->_doc_comments($node);
-	my $indent = "  ";
+	my $indent = q{  };
 	print $FH $indent;
-	$self->_attr_getter($node, "AS_DECL", "");
+	$self->_attr_getter($node, 'AS_DECL', q{});
 	print $FH " = 0;\n";
 	unless (exists $node->{modifier}) {		# readonly
 		print $FH $indent;
-		$self->_attr_setter($node, "AS_DECL", "");
+		$self->_attr_setter($node, 'AS_DECL', q{});
 		print $FH " = 0;\n";
 	}
 	print $FH "\n";
@@ -706,13 +725,14 @@ sub _attr_getter {
 	my $self = shift;
 	my ($node, $mode, $className) = @_;
 	my $FH = $self->{out};
-	if      ($mode eq "AS_DECL") {
+	if    ($mode eq 'AS_DECL') {
 		print $FH "NS_IMETHOD ";
-	} elsif ($mode eq "AS_IMPL") {
+	}
+	elsif ($mode eq 'AS_IMPL') {
 		print $FH "NS_IMETHODIMP ",$className,"::";
 	}
 	print $FH "Get",ucfirst($node->{idf}),"(";
-	if ($mode eq "AS_DECL" or $mode eq "AS_IMPL") {
+	if ($mode eq 'AS_DECL' or $mode eq 'AS_IMPL') {
 		my $type = $self->_get_defn($node->{type});
 		print $FH $type->{xp_name}," ";
 		unless ($self->_is_dipper($type)) {
@@ -726,23 +746,24 @@ sub _attr_setter {
 	my $self = shift;
 	my ($node, $mode, $className) = @_;
 	my $FH = $self->{out};
-	if      ($mode eq "AS_DECL") {
+	if    ($mode eq 'AS_DECL') {
 		print $FH "NS_IMETHOD ";
-	} elsif ($mode eq "AS_IMPL") {
+	}
+	elsif ($mode eq 'AS_IMPL') {
 		print $FH "NS_IMETHODIMP ",$className,"::";
 	}
 	print $FH "Set",ucfirst($node->{idf}),"(";
-	if ($mode eq "AS_DECL" or $mode eq "AS_IMPL") {
+	if ($mode eq 'AS_DECL' or $mode eq 'AS_IMPL') {
 		my $type = $self->_get_defn($node->{type});
 		# Setters for string, wstring, nsid, domstring, utf8string,
 		# cstring and astring get const.
 		if (       $type->isa('StringType')
 				or $type->isa('WideStringType')
-				or $type->hasProperty("nsid")
-				or $type->hasProperty("domstring")
-				or $type->hasProperty("utf8string")
-				or $type->hasProperty("cstring")
-				or $type->hasProperty("astring") ) {
+				or $type->hasProperty('nsid')
+				or $type->hasProperty('domstring')
+				or $type->hasProperty('utf8string')
+				or $type->hasProperty('cstring')
+				or $type->hasProperty('astring') ) {
 			print $FH "const ";
 		}
 		print $FH $type->{xp_name}," ";
@@ -801,7 +822,8 @@ sub _get_defn {
 	my ($defn) = @_;
 	if (ref $defn) {
 		return $defn;
-	} else {
+	}
+	else {
 		return $self->{symbtab}->Lookup($defn);
 	}
 }
@@ -841,8 +863,8 @@ sub visitBaseInterface {
 sub visitRegularInterface {
 	my $self = shift;
 	my ($node, $deep) = @_;
-	return if (exists $node->{$self->{key}});
-	$node->{$self->{key}} = $node->{idf} . " *";
+	return if (exists $node->{$self->{key}} and !defined $deep);
+	$node->{$self->{key}} = $node->{idf} . ' *';
 	return unless (defined $deep);
 	foreach (@{$node->{list_export}}) {
 		$self->_get_defn($_)->visit($self);
@@ -852,7 +874,7 @@ sub visitRegularInterface {
 sub visitForwardRegularInterface {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = $node->{idf} . " *";
+	$node->{$self->{key}} = $node->{idf} . ' *';
 }
 
 #
@@ -881,20 +903,24 @@ sub visitNativeType {
 	my $self = shift;
 	my ($node) = @_;
 
-	if      (  $node->hasProperty("domstring")
-			or $node->hasProperty("astring") ) {
-		$node->{$self->{key}} = "nsAString";
-	} elsif ($node->hasProperty("utf8string")) {
-		$node->{$self->{key}} = "nsACString";
-	} elsif ($node->hasProperty("cstring")) {
-		$node->{$self->{key}} = "nsACString";
-	} else {
+	if    (  $node->hasProperty('domstring')
+			or $node->hasProperty('astring') ) {
+		$node->{$self->{key}} = 'nsAString';
+	}
+	elsif ($node->hasProperty('utf8string')) {
+		$node->{$self->{key}} = 'nsACString';
+	}
+	elsif ($node->hasProperty('cstring')) {
+		$node->{$self->{key}} = 'nsACString';
+	}
+	else {
 		$node->{$self->{key}} = $node->{native};
 	}
-	if      ($node->hasProperty("ptr")) {
-		$node->{$self->{key}} .= " *";
-	} elsif ($node->hasProperty("ref")) {
-		$node->{$self->{key}} .= " &";
+	if    ($node->hasProperty('ptr')) {
+		$node->{$self->{key}} .= ' *';
+	}
+	elsif ($node->hasProperty('ref')) {
+		$node->{$self->{key}} .= ' &';
 	}
 }
 
@@ -905,19 +931,22 @@ sub visitNativeType {
 sub visitBasicType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "unknown_type_" . ref $node;
+	$node->{$self->{key}} = 'unknown_type_' . ref $node;
 }
 
 sub visitFloatingPtType {
 	my $self = shift;
 	my ($node) = @_;
-	if      ($node->{value} eq 'float') {
-		$node->{$self->{key}} = "float";
-	} elsif ($node->{value} eq 'double') {
-		$node->{$self->{key}} = "double";
-	} elsif ($node->{value} eq 'long double') {
-		$node->{$self->{key}} = "long double";
-	} else {
+	if    ($node->{value} eq 'float') {
+		$node->{$self->{key}} = 'float';
+	}
+	elsif ($node->{value} eq 'double') {
+		$node->{$self->{key}} = 'double';
+	}
+	elsif ($node->{value} eq 'long double') {
+		$node->{$self->{key}} = 'long double';
+	}
+	else {
 		warn __PACKAGE__,"::visitFloatingPtType $node->{value}.\n";
 	}
 }
@@ -925,19 +954,25 @@ sub visitFloatingPtType {
 sub visitIntegerType {
 	my $self = shift;
 	my ($node) = @_;
-	if      ($node->{value} eq 'short') {
-		$node->{$self->{key}} = "PRInt16";
-	} elsif ($node->{value} eq 'unsigned short') {
-		$node->{$self->{key}} = "PRUint16";
-	} elsif ($node->{value} eq 'long') {
-		$node->{$self->{key}} = "PRInt32";
-	} elsif ($node->{value} eq 'unsigned long') {
-		$node->{$self->{key}} = "PRUint32";
-	} elsif ($node->{value} eq 'long long') {
-		$node->{$self->{key}} = "PRInt64";
-	} elsif ($node->{value} eq 'unsigned long long') {
-		$node->{$self->{key}} = "PRUint64";
-	} else {
+	if    ($node->{value} eq 'short') {
+		$node->{$self->{key}} = 'PRInt16';
+	}
+	elsif ($node->{value} eq 'unsigned short') {
+		$node->{$self->{key}} = 'PRUint16';
+	}
+	elsif ($node->{value} eq 'long') {
+		$node->{$self->{key}} = 'PRInt32';
+	}
+	elsif ($node->{value} eq 'unsigned long') {
+		$node->{$self->{key}} = 'PRUint32';
+	}
+	elsif ($node->{value} eq 'long long') {
+		$node->{$self->{key}} = 'PRInt64';
+	}
+	elsif ($node->{value} eq 'unsigned long long') {
+		$node->{$self->{key}} = 'PRUint64';
+	}
+	else {
 		warn __PACKAGE__,"::visitIntegerType $node->{value}.\n";
 	}
 }
@@ -945,25 +980,25 @@ sub visitIntegerType {
 sub visitCharType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "char";
+	$node->{$self->{key}} = 'char';
 }
 
 sub visitWideCharType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "PRUnichar";
+	$node->{$self->{key}} = 'PRUnichar';
 }
 
 sub visitBooleanType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "PRBool";
+	$node->{$self->{key}} = 'PRBool';
 }
 
 sub visitOctetType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "PRUint8";
+	$node->{$self->{key}} = 'PRUint8';
 }
 
 #
@@ -996,13 +1031,13 @@ sub visitSequenceType {
 sub visitStringType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "char *";
+	$node->{$self->{key}} = 'char *';
 }
 
 sub visitWideStringType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "PRUnichar *";
+	$node->{$self->{key}} = 'PRUnichar *';
 }
 
 sub visitFixedPtType {
@@ -1043,7 +1078,7 @@ sub visitParameter {
 sub visitVoidType {
 	my $self = shift;
 	my ($node) = @_;
-	$node->{$self->{key}} = "void";
+	$node->{$self->{key}} = 'void';
 }
 
 #

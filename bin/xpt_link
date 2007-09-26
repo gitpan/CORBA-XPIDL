@@ -10,11 +10,11 @@ my %opts;
 getopts('t:', \%opts)
 		or pod2usage(-exitval => 1, -verbose=> 1);
 
-$opts{t} = "1.2" unless (exists $opts{t});
+$opts{t} = '1.2' unless (exists $opts{t});
 die "ERROR: version $opts{t} not supported.\n"
-		if ($opts{t} eq "1.0");
+		if ($opts{t} eq '1.0');
 die "ERROR: version $opts{t} not recognised.\n"
-		if ($opts{t} ne "1.1" and $opts{t} ne "1.2");
+		if ($opts{t} ne '1.1' and $opts{t} ne '1.2');
 
 my $major_version = substr $opts{t}, 0, 1;
 my $minor_version = substr $opts{t}, 2, 1;
@@ -31,12 +31,12 @@ eval {
 			minor_version	=> $minor_version,
 	);
 	foreach my $filename (@ARGV) {
-		open IN, $filename
+		open my $IN, '<', $filename
 				or die "FAILED: can't read $filename\n";
-		binmode IN, ":raw";
+		binmode $IN, ':raw';
 		undef $/;
-		my $rv = <IN>;
-		close IN;
+		my $rv = <$IN>;
+		close $IN;
 
 		my $offset = 0;
 		my $file = XPT::File::demarshal(\$rv, \$offset);
@@ -53,11 +53,11 @@ eval {
 	$whole->terminate_annotations();
 	$whole->indexe();
 
-	open OUT, ">$outfile"
+	open my $OUT, '>', $outfile
 			or die "FAILED: can't open $outfile\n";
-	binmode OUT, ":raw";
-	print OUT $whole->marshal();
-	close OUT;
+	binmode $OUT, ':raw';
+	print $OUT $whole->marshal();
+	close $OUT;
 	exit(0);
 };
 if ($@) {
@@ -99,7 +99,7 @@ http://mozilla.org/scriptable/typelib_file.html
 
 =head1 SEE ALSO
 
-L<xpidl.pl>, L<xpt_dump.pl>
+L<xpidl>, L<xpt_dump>
 
 =head1 AUTHORS
 
@@ -109,9 +109,10 @@ Port to Perl by Francois Perrad, francois.perrad@gadz.org
 
 =head1 COPYRIGHT
 
-Copyright 2004, Francois Perrad.
+Copyright 2004-2007, Francois Perrad.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =cut
+

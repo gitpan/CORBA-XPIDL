@@ -16,12 +16,12 @@ pod2usage(-exitval => 1, -verbose=> 1)
 		if (!defined $filename or @ARGV);
 
 eval {
-	open IN, $filename
+	open my $IN, '<', $filename
 			or die "FAILED: can't read $filename\n";
-	binmode IN, ":raw";
+	binmode $IN, ':raw';
 	undef $/;
-	my $rv = <IN>;
-	close IN;
+	my $rv = <$IN>;
+	close $IN;
 
 	$XPT::demarshal_not_abort = 1;
 	$XPT::demarshal_retcode = 0;
@@ -72,7 +72,7 @@ http://mozilla.org/scriptable/typelib_file.html
 
 =head1 SEE ALSO
 
-L<xpidl.pl>, L<xpt_link.pl>
+L<xpidl>, L<xpt_link>
 
 =head1 AUTHORS
 
@@ -82,9 +82,10 @@ Port to Perl by Francois Perrad, francois.perrad@gadz.org
 
 =head1 COPYRIGHT
 
-Copyright 2004, Francois Perrad.
+Copyright 2004-2007, Francois Perrad.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
 =cut
+

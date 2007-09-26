@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use UNIVERSAL;
 
 package CORBA::XPIDL::docVisitor;
@@ -16,11 +17,13 @@ sub new {
 	my $filename;
 	if ($parser->YYData->{opt_e}) {
 		$filename = $parser->YYData->{opt_e};
-	} else {
+	}
+	else {
 		if ($parser->YYData->{opt_o}) {
-			$filename = $parser->YYData->{opt_o} . ".html";
-		} else {
-			$filename = basename($self->{srcname}, ".idl") . ".html";
+			$filename = $parser->YYData->{opt_o} . '.html';
+		}
+		else {
+			$filename = basename($self->{srcname}, '.idl') . '.html';
 		}
 	}
 	$self->open_stream($filename);
@@ -31,9 +34,8 @@ sub new {
 sub open_stream {
 	my $self = shift;
 	my ($filename) = @_;
-	open(OUT, "> $filename")
+	open $self->{out}, '>', $filename
 			or die "can't open $filename ($!).\n";
-	$self->{out} = \*OUT;
 	$self->{filename} = $filename;
 }
 
@@ -42,7 +44,8 @@ sub _get_defn {
 	my ($defn) = @_;
 	if (ref $defn) {
 		return $defn;
-	} else {
+	}
+	else {
 		return $self->{symbtab}->Lookup($defn);
 	}
 }
