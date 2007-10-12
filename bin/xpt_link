@@ -1,20 +1,21 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use Getopt::Std;
 use Pod::Usage;
-use CORBA::XPIDL::xpt;
+use CORBA::XPIDL::XPT;
 
 my %opts;
 getopts('t:', \%opts)
-		or pod2usage(-exitval => 1, -verbose=> 1);
+        or pod2usage(-exitval => 1, -verbose=> 1);
 
 $opts{t} = '1.2' unless (exists $opts{t});
 die "ERROR: version $opts{t} not supported.\n"
-		if ($opts{t} eq '1.0');
+        if ($opts{t} eq '1.0');
 die "ERROR: version $opts{t} not recognised.\n"
-		if ($opts{t} ne '1.1' and $opts{t} ne '1.2');
+        if ($opts{t} ne '1.1' and $opts{t} ne '1.2');
 
 my $major_version = substr $opts{t}, 0, 1;
 my $minor_version = substr $opts{t}, 2, 1;
@@ -22,47 +23,47 @@ my $minor_version = substr $opts{t}, 2, 1;
 my $outfile = shift;
 
 pod2usage(-exitval => 1, -verbose=> 1)
-		if (!defined $outfile or !@ARGV);
+        if (!defined $outfile or !@ARGV);
 
 eval {
-	my $whole = new XPT::File(
-			magic			=> XPT::File::MAGIC,
-			major_version	=> $major_version,
-			minor_version	=> $minor_version,
-	);
-	foreach my $filename (@ARGV) {
-		open my $IN, '<', $filename
-				or die "FAILED: can't read $filename\n";
-		binmode $IN, ':raw';
-		undef $/;
-		my $rv = <$IN>;
-		close $IN;
+    my $whole = new XPT::File(
+            magic           => XPT::File::MAGIC,
+            major_version   => $major_version,
+            minor_version   => $minor_version,
+    );
+    foreach my $filename (@ARGV) {
+        open my $IN, '<', $filename
+                or die "FAILED: can't read $filename\n";
+        binmode $IN, ':raw';
+        undef $/;
+        my $rv = <$IN>;
+        close $IN;
 
-		my $offset = 0;
-		my $file = XPT::File::demarshal(\$rv, \$offset);
+        my $offset = 0;
+        my $file = XPT::File::demarshal(\$rv, \$offset);
 
-		foreach (@{$file->{annotations}}) {
-			if ($_->{tag}) {	# not empty
-				$whole->add_annotation($_);
-			}
-		}
-		foreach ($file->_interface_directory()) {
-			$whole->add_interface($_);
-		}
-	}
-	$whole->terminate_annotations();
-	$whole->indexe();
+        foreach (@{$file->{annotations}}) {
+            if ($_->{tag}) {    # not empty
+                $whole->add_annotation($_);
+            }
+        }
+        foreach ($file->_interface_directory()) {
+            $whole->add_interface($_);
+        }
+    }
+    $whole->terminate_annotations();
+    $whole->indexe();
 
-	open my $OUT, '>', $outfile
-			or die "FAILED: can't open $outfile\n";
-	binmode $OUT, ':raw';
-	print $OUT $whole->marshal();
-	close $OUT;
-	exit(0);
+    open my $OUT, '>', $outfile
+            or die "FAILED: can't open $outfile\n";
+    binmode $OUT, ':raw';
+    print $OUT $whole->marshal();
+    close $OUT;
+    exit(0);
 };
 if ($@) {
-	warn $@;
-	exit(1);
+    warn $@;
+    exit(1);
 }
 
 

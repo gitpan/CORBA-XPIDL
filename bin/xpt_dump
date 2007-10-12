@@ -1,42 +1,43 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use Getopt::Std;
 use Pod::Usage;
-use CORBA::XPIDL::xpt;
+use CORBA::XPIDL::XPT;
 
 my %opts;
 getopts('v', \%opts)
-		or pod2usage(-exitval => 1, -verbose=> 1);
+        or pod2usage(-exitval => 1, -verbose=> 1);
 
 my $filename = shift;
 
 pod2usage(-exitval => 1, -verbose=> 1)
-		if (!defined $filename or @ARGV);
+        if (!defined $filename or @ARGV);
 
 eval {
-	open my $IN, '<', $filename
-			or die "FAILED: can't read $filename\n";
-	binmode $IN, ':raw';
-	undef $/;
-	my $rv = <$IN>;
-	close $IN;
+    open my $IN, '<', $filename
+            or die "FAILED: can't read $filename\n";
+    binmode $IN, ':raw';
+    undef $/;
+    my $rv = <$IN>;
+    close $IN;
 
-	$XPT::demarshal_not_abort = 1;
-	$XPT::demarshal_retcode = 0;
-	my $offset = 0;
-	my $file = XPT::File::demarshal(\$rv, \$offset);
-	print "WARNING: problem(s) occured during parsing.\n\n"
-			if ($XPT::demarshal_retcode);
+    $XPT::demarshal_not_abort = 1;
+    $XPT::demarshal_retcode = 0;
+    my $offset = 0;
+    my $file = XPT::File::demarshal(\$rv, \$offset);
+    print "WARNING: problem(s) occured during parsing.\n\n"
+            if ($XPT::demarshal_retcode);
 
-	$XPT::stringify_verbose = 1 if ($opts{v});
-	print $file->stringify();
-	exit($XPT::demarshal_retcode);
+    $XPT::stringify_verbose = 1 if ($opts{v});
+    print $file->stringify();
+    exit($XPT::demarshal_retcode);
 };
 if ($@) {
-	warn $@;
-	exit(1);
+    warn $@;
+    exit(1);
 }
 
 ###############################################################################
