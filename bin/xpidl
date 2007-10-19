@@ -7,7 +7,7 @@ use Getopt::Std;
 use Pod::Usage;
 use File::Temp qw(tempfile);
 
-use CORBA::IDL      2.60;
+use CORBA::IDL      2.61;
 use CORBA::XPIDL;
 use CORBA::XPIDL::CheckVisitor;
 use CORBA::XPIDL::DocVisitor;

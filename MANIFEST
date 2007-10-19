@@ -2,6 +2,7 @@ Changes
 Makefile.PL
 MANIFEST
 README
+test.pl
 lib/CORBA/XPIDL.pm
 lib/CORBA/XPIDL/CheckVisitor.pm
 lib/CORBA/XPIDL/DocVisitor.pm

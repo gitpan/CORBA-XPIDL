@@ -6,7 +6,7 @@ WriteMakefile(
     'VERSION_FROM'  => 'lib/CORBA/XPIDL.pm',
     'ABSTRACT'      => 'XPIDL compiler (for Mozilla)',
     'PREREQ_PM'     => {
-                        'CORBA::IDL'    => 2.60,
+                        'CORBA::IDL'    => 2.61,
     },
     'INSTALLDIRS'   => 'site',
     'EXE_FILES'     => [ 'bin/xpidl', 'bin/xpt_dump', 'bin/xpt_link' ],

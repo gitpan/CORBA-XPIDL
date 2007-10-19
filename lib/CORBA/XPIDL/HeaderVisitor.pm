@@ -4,7 +4,7 @@ package CORBA::XPIDL::HeaderVisitor;
 use strict;
 use warnings;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 use File::Basename;
 
@@ -609,7 +609,7 @@ sub _method {
                 'type'  => $type,
                 'idf'   => '_retval',
         );
-        bless $fake_param, 'Parameter';
+        bless $fake_param, 'CORBA::IDL::Parameter';
         print $FH ", " unless ($first);
         if ($mode eq 'AS_DECL' or $mode eq 'AS_IMPL') {
             $self->_param($fake_param);
